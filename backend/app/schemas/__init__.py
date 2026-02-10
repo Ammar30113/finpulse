@@ -1,0 +1,1 @@
+# FinPulse schema definitions
