@@ -33,6 +33,7 @@ export default function GoalsPage() {
   const router = useRouter();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState("");
@@ -51,10 +52,11 @@ export default function GoalsPage() {
   const fetchGoals = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.get<Goal[]>("/goals");
       setGoals(data);
-    } catch {
-      // handled
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load goals");
     } finally {
       setLoading(false);
     }
@@ -103,6 +105,12 @@ export default function GoalsPage() {
             <Button onClick={() => setShowForm(true)}>Add Goal</Button>
           </div>
 
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {loading ? (
             <div className="grid gap-4 md:grid-cols-2">
               {[1, 2].map((i) => (
@@ -141,9 +149,20 @@ export default function GoalsPage() {
                       </div>
                     </div>
 
-                    {goal.target_date && (
-                      <p className="text-xs text-gray-400 mb-3">Target: {goal.target_date}</p>
-                    )}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-3">
+                      {goal.target_date && <span>Target: {goal.target_date}</span>}
+                      {goal.on_track !== null && (
+                        <span className={goal.on_track ? "text-green-600" : "text-amber-600"}>
+                          {goal.on_track ? "On track" : "Behind pace"}
+                        </span>
+                      )}
+                      {goal.monthly_needed !== null && (
+                        <span>${goal.monthly_needed.toLocaleString()}/mo needed</span>
+                      )}
+                      {goal.days_remaining !== null && (
+                        <span>{goal.days_remaining}d left</span>
+                      )}
+                    </div>
 
                     {editingId === goal.id ? (
                       <div className="flex gap-2">

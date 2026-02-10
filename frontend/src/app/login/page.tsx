@@ -139,7 +139,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
                 placeholder="••••••••"
-                minLength={6}
+                minLength={8}
               />
             </div>
 

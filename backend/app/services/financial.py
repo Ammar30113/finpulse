@@ -8,8 +8,11 @@ from app.models.expense import Expense
 from app.models.goal import Goal
 from app.models.installment_plan import InstallmentPlan
 from app.models.investment import Investment
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionType
 from app.models.user import User
+
+UPCOMING_BILLS_WINDOW_DAYS = 30
+RECENT_TRANSACTIONS_LIMIT = 10
 
 
 def _normalize_to_monthly(amount: float, frequency: str | None) -> float:
@@ -66,7 +69,7 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
     # Liabilities: credit card balances + remaining installment amounts
     cc_balance = sum(float(c.current_balance) for c in cards)
     installment_remaining = sum(
-        float(ip.remaining_amount) for ip in installments if hasattr(ip, "remaining_amount")
+        float(ip.monthly_payment) * ip.remaining_payments for ip in installments
     )
     total_liabilities = cc_balance + installment_remaining
 
@@ -76,19 +79,19 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
     monthly_income = sum(
         float(t.amount)
         for t in month_transactions
-        if str(t.transaction_type).lower() in ("credit", "transactiontype.credit")
+        if t.transaction_type == TransactionType.CREDIT
     )
 
     # Monthly expenses: recurring expenses (normalized) + debit transactions this month
     recurring_monthly = sum(
-        _normalize_to_monthly(float(e.amount), e.frequency if hasattr(e, "frequency") else None)
+        _normalize_to_monthly(float(e.amount), e.frequency)
         for e in expenses
         if e.is_recurring
     )
     debit_this_month = sum(
         float(t.amount)
         for t in month_transactions
-        if str(t.transaction_type).lower() in ("debit", "transactiontype.debit")
+        if t.transaction_type == TransactionType.DEBIT
     )
     monthly_expenses = recurring_monthly + debit_this_month
 
@@ -98,8 +101,8 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
     total_cc_limit = sum(float(c.credit_limit) for c in cards)
     credit_utilization_pct = (cc_balance / total_cc_limit * 100) if total_cc_limit > 0 else 0
 
-    # Upcoming bills: recurring expenses with next_due_date in next 30 days
-    thirty_days = today + timedelta(days=30)
+    # Upcoming bills: recurring expenses with next_due_date in the window
+    thirty_days = today + timedelta(days=UPCOMING_BILLS_WINDOW_DAYS)
     upcoming_bills = [
         {
             "category": e.category,
@@ -128,12 +131,12 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
         for g in goals
     ]
 
-    # Recent transactions (last 10)
+    # Recent transactions
     recent_txns = (
         db.query(Transaction)
         .filter(Transaction.user_id == user.id)
         .order_by(Transaction.date.desc(), Transaction.created_at.desc())
-        .limit(10)
+        .limit(RECENT_TRANSACTIONS_LIMIT)
         .all()
     )
     recent_transactions = [

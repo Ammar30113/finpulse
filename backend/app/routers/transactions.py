@@ -54,6 +54,8 @@ def list_transactions(
     category: str | None = Query(None, description="Filter by category"),
     date_from: date | None = Query(None, description="Start date (inclusive)"),
     date_to: date | None = Query(None, description="End date (inclusive)"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -68,7 +70,7 @@ def list_transactions(
     if date_to:
         query = query.filter(Transaction.date <= date_to)
 
-    return query.order_by(Transaction.date.desc(), Transaction.created_at.desc()).all()
+    return query.order_by(Transaction.date.desc(), Transaction.created_at.desc()).offset(offset).limit(limit).all()
 
 
 @router.post("/upload-csv", status_code=status.HTTP_201_CREATED)

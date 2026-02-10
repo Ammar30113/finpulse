@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -37,6 +37,8 @@ def create_credit_card(
 
 @router.get("/", response_model=list[CreditCardResponse])
 def list_credit_cards(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -44,6 +46,8 @@ def list_credit_cards(
         db.query(CreditCard)
         .filter(CreditCard.user_id == current_user.id)
         .order_by(CreditCard.created_at.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 

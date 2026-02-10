@@ -35,6 +35,7 @@ export default function ExpensesPage() {
   const router = useRouter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     category: "Housing",
@@ -52,10 +53,11 @@ export default function ExpensesPage() {
   const fetchExpenses = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.get<Expense[]>("/expenses");
       setExpenses(data);
-    } catch {
-      // handled by api client
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load expenses");
     } finally {
       setLoading(false);
     }
@@ -97,6 +99,12 @@ export default function ExpensesPage() {
             <p className="text-sm text-gray-500">{expenses.length} expense(s)</p>
             <Button onClick={() => setShowForm(true)}>Add Expense</Button>
           </div>
+
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {loading ? (
             <div className="space-y-2">

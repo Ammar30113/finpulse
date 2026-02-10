@@ -17,6 +17,7 @@ export default function CreditCardsPage() {
   const router = useRouter();
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBalance, setEditBalance] = useState("");
@@ -38,10 +39,11 @@ export default function CreditCardsPage() {
   const fetchCards = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.get<CreditCard[]>("/credit-cards");
       setCards(data);
-    } catch {
-      // handled
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load credit cards");
     } finally {
       setLoading(false);
     }
@@ -92,6 +94,12 @@ export default function CreditCardsPage() {
             <p className="text-sm text-gray-500">{cards.length} card(s)</p>
             <Button onClick={() => setShowForm(true)}>Add Credit Card</Button>
           </div>
+
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {loading ? (
             <div className="grid gap-4 md:grid-cols-2">

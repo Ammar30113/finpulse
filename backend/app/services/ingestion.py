@@ -1,21 +1,44 @@
 import csv
+import hashlib
 import io
 from datetime import datetime
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.transaction import Transaction, TransactionType
 
+REQUIRED_COLUMNS = {"date", "description", "amount"}
+
+
+def _transaction_hash(account_id: UUID, txn_date, amount: float, description: str) -> str:
+    raw = f"{account_id}|{txn_date}|{amount}|{description}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
 
 def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID) -> list[dict]:
     """
-    Parse a CSV file with columns: date, description, amount, category
+    Parse a CSV file with columns: date, description, amount, category (optional).
     Negative amounts = debit, positive = credit.
     Returns list of transaction dicts ready for DB insertion.
     """
     decoded = file_content.decode("utf-8")
     reader = csv.DictReader(io.StringIO(decoded))
+
+    if not reader.fieldnames:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CSV file has no headers",
+        )
+
+    headers = {h.strip().lower() for h in reader.fieldnames}
+    missing = REQUIRED_COLUMNS - headers
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"CSV missing required columns: {', '.join(sorted(missing))}. Found: {', '.join(sorted(headers))}",
+        )
 
     transactions = []
     for row in reader:
@@ -34,22 +57,52 @@ def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID)
             except ValueError:
                 continue
 
+        description = row.get("description", "").strip()
+
         transactions.append({
             "account_id": account_id,
             "user_id": user_id,
             "amount": abs(amount),
             "transaction_type": TransactionType.CREDIT if amount > 0 else TransactionType.DEBIT,
             "category": row.get("category", "").strip() or "Uncategorized",
-            "description": row.get("description", "").strip(),
+            "description": description,
             "date": txn_date,
+            "_hash": _transaction_hash(account_id, txn_date, abs(amount), description),
         })
 
     return transactions
 
 
 def bulk_insert_transactions(db: Session, transactions: list[dict]) -> int:
-    """Insert parsed transactions into the database. Returns count inserted."""
-    objects = [Transaction(**txn) for txn in transactions]
-    db.add_all(objects)
-    db.commit()
-    return len(objects)
+    """Insert parsed transactions into the database, skipping duplicates. Returns count inserted."""
+    if not transactions:
+        return 0
+
+    hashes = [t["_hash"] for t in transactions]
+    user_id = transactions[0]["user_id"]
+    account_id = transactions[0]["account_id"]
+
+    # Find existing transactions to detect duplicates
+    existing = (
+        db.query(Transaction)
+        .filter(
+            Transaction.user_id == user_id,
+            Transaction.account_id == account_id,
+        )
+        .all()
+    )
+    existing_hashes = {
+        _transaction_hash(e.account_id, e.date, float(e.amount), e.description or "")
+        for e in existing
+    }
+
+    new_txns = []
+    for txn in transactions:
+        if txn["_hash"] not in existing_hashes:
+            txn_data = {k: v for k, v in txn.items() if k != "_hash"}
+            new_txns.append(Transaction(**txn_data))
+
+    if new_txns:
+        db.add_all(new_txns)
+        db.commit()
+    return len(new_txns)

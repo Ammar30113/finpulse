@@ -36,13 +36,15 @@ def create_expense(
 @router.get("/", response_model=list[ExpenseResponse])
 def list_expenses(
     category: str | None = Query(None, description="Filter by expense category"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Expense).filter(Expense.user_id == current_user.id)
     if category:
         query = query.filter(Expense.category == category)
-    return query.order_by(Expense.created_at.desc()).all()
+    return query.order_by(Expense.created_at.desc()).offset(offset).limit(limit).all()
 
 
 @router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)

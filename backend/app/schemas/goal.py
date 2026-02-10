@@ -27,6 +27,9 @@ class GoalResponse(BaseModel):
     current_amount: float
     target_date: date | None = None
     progress_pct: float = 0
+    on_track: bool | None = None
+    monthly_needed: float | None = None
+    days_remaining: int | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -35,6 +35,28 @@ export interface RecentTransaction {
   date: string;
 }
 
+export interface Account {
+  id: string;
+  user_id: string;
+  name: string;
+  account_type: string;
+  balance: number;
+  currency: string;
+  created_at: string;
+}
+
+export interface Transaction {
+  id: string;
+  user_id: string;
+  account_id: string;
+  amount: number;
+  transaction_type: string;
+  category: string | null;
+  description: string | null;
+  date: string;
+  created_at: string;
+}
+
 export interface CreditCard {
   id: string;
   name: string;
@@ -76,6 +98,9 @@ export interface Goal {
   current_amount: number;
   target_date: string | null;
   progress_pct: number;
+  on_track: boolean | null;
+  monthly_needed: number | null;
+  days_remaining: number | null;
 }
 
 export interface AnalysisInsight {

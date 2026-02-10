@@ -33,6 +33,7 @@ export default function InvestmentsPage() {
   const router = useRouter();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     investment_type: "tfsa",
@@ -49,10 +50,11 @@ export default function InvestmentsPage() {
   const fetchInvestments = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.get<Investment[]>("/investments");
       setInvestments(data);
-    } catch {
-      // handled
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load investments");
     } finally {
       setLoading(false);
     }
@@ -102,6 +104,12 @@ export default function InvestmentsPage() {
             </div>
             <Button onClick={() => setShowForm(true)}>Add Investment</Button>
           </div>
+
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {loading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

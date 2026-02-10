@@ -4,18 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { AuthContext, type AuthUser } from "@/lib/auth";
 import { api } from "@/lib/api";
 
-interface TokenPayload {
-  sub: string;
-  exp: number;
-}
-
-function decodeToken(token: string): TokenPayload | null {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload;
-  } catch {
-    return null;
-  }
+interface LoginResponse {
+  access_token: string;
+  user: AuthUser;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -24,39 +15,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token = api.getToken();
-    if (token) {
-      const payload = decodeToken(token);
-      if (payload && payload.exp * 1000 > Date.now()) {
-        const stored = localStorage.getItem("user");
-        if (stored) {
-          setUser(JSON.parse(stored));
-        }
-      } else {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    api
+      .get<AuthUser>("/auth/me")
+      .then((u) => {
+        setUser(u);
+        localStorage.setItem("user", JSON.stringify(u));
+      })
+      .catch(() => {
         api.setToken(null);
         localStorage.removeItem("user");
-      }
-    }
-    setLoading(false);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await api.post<{ access_token: string }>("/auth/login", { email, password });
+    const res = await api.post<LoginResponse>("/auth/login", { email, password });
     api.setToken(res.access_token);
-    const userInfo: AuthUser = { id: decodeToken(res.access_token)?.sub || "", email, full_name: "" };
-    localStorage.setItem("user", JSON.stringify(userInfo));
-    setUser(userInfo);
+    localStorage.setItem("user", JSON.stringify(res.user));
+    setUser(res.user);
   }, []);
 
   const register = useCallback(async (email: string, password: string, fullName: string) => {
-    const res = await api.post<{ access_token: string }>("/auth/register", {
+    const res = await api.post<LoginResponse>("/auth/register", {
       email,
       password,
       full_name: fullName,
     });
     api.setToken(res.access_token);
-    const userInfo: AuthUser = { id: decodeToken(res.access_token)?.sub || "", email, full_name: fullName };
-    localStorage.setItem("user", JSON.stringify(userInfo));
-    setUser(userInfo);
+    localStorage.setItem("user", JSON.stringify(res.user));
+    setUser(res.user);
   }, []);
 
   const logout = useCallback(() => {
