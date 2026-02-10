@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Ensure the backend root is on the Python path so `app` is importable
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from logging.config import fileConfig
 
 from alembic import context
