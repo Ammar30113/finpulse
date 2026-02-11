@@ -32,9 +32,8 @@ npm-debug.log*
 *.db
 *.sqlite3
 
-# Alembic
-alembic/versions/*.py
-!alembic/versions/.gitkeep
+# Alembic — versions must be tracked for Railway deploys
+# alembic/versions/*.py
 
 # Misc
 coverage/
