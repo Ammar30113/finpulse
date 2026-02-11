@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -23,6 +23,7 @@ def create_access_token(subject: str | None = None, *, data: dict | None = None)
         sub = subject
     else:
         raise ValueError("Must provide subject or data with 'sub' key")
-    expire = datetime.utcnow() + timedelta(minutes=settings.jwt_expiration_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiration_minutes)
     payload = {"sub": sub, "exp": expire}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+

@@ -25,7 +25,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(u);
         localStorage.setItem("user", JSON.stringify(u));
       })
-      .catch(() => {
+      .catch((err) => {
+        // On network errors, fall back to cached user so the app stays usable offline
+        if (err instanceof TypeError || err.message === "Failed to fetch") {
+          const cached = localStorage.getItem("user");
+          if (cached) {
+            try {
+              setUser(JSON.parse(cached));
+              return;
+            } catch {
+              // corrupted cache, fall through to clear
+            }
+          }
+        }
+        // Auth failure or no cache — clear session
         api.setToken(null);
         localStorage.removeItem("user");
       })

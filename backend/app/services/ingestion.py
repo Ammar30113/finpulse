@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import io
+import logging
 from datetime import datetime
 from uuid import UUID
 
@@ -8,6 +9,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.transaction import Transaction, TransactionType
+
+logger = logging.getLogger("finpulse.ingestion")
 
 REQUIRED_COLUMNS = {"date", "description", "amount"}
 
@@ -41,11 +44,14 @@ def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID)
         )
 
     transactions = []
-    for row in reader:
+    skipped = 0
+    for row_num, row in enumerate(reader, start=2):  # start=2 accounts for header row
         amount_str = row.get("amount", "0").strip().replace(",", "").replace("$", "")
         try:
             amount = float(amount_str)
         except ValueError:
+            skipped += 1
+            logger.warning("Row %d: invalid amount '%s', skipping", row_num, amount_str)
             continue
 
         date_str = row.get("date", "").strip()
@@ -55,6 +61,8 @@ def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID)
             try:
                 txn_date = datetime.strptime(date_str, "%m/%d/%Y").date()
             except ValueError:
+                skipped += 1
+                logger.warning("Row %d: unparseable date '%s', skipping", row_num, date_str)
                 continue
 
         description = row.get("description", "").strip()
@@ -70,6 +78,8 @@ def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID)
             "_hash": _transaction_hash(account_id, txn_date, abs(amount), description),
         })
 
+    if skipped:
+        logger.info("CSV parse complete: %d transactions parsed, %d rows skipped", len(transactions), skipped)
     return transactions
 
 

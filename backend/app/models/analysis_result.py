@@ -1,11 +1,15 @@
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy import Date, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class AnalysisResult(Base):
@@ -18,4 +22,4 @@ class AnalysisResult(Base):
     warnings: Mapped[dict] = mapped_column(JSON, nullable=False)
     recommendations: Mapped[dict] = mapped_column(JSON, nullable=False)
     raw_data: Mapped[dict] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

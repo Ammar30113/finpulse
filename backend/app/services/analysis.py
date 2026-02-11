@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 
 from sqlalchemy.orm import Session
@@ -9,6 +10,8 @@ from app.models.expense import Expense
 from app.models.goal import Goal
 from app.models.investment import Investment
 from app.models.user import User
+
+logger = logging.getLogger("finpulse.analysis")
 
 
 def generate_analysis(db: Session, user: User) -> dict:
@@ -173,15 +176,20 @@ def generate_analysis(db: Session, user: User) -> dict:
     }
 
     # Persist analysis result
-    analysis_record = AnalysisResult(
-        user_id=user.id,
-        snapshot_date=date.today(),
-        insights=insights[:3],
-        warnings=warnings[:2],
-        recommendations=recommendations[:2],
-        raw_data={"net_worth": net_worth, "utilization": utilization, "total_investments": total_investments},
-    )
-    db.add(analysis_record)
-    db.commit()
+    try:
+        analysis_record = AnalysisResult(
+            user_id=user.id,
+            snapshot_date=date.today(),
+            insights=insights[:3],
+            warnings=warnings[:2],
+            recommendations=recommendations[:2],
+            raw_data={"net_worth": net_worth, "utilization": utilization, "total_investments": total_investments},
+        )
+        db.add(analysis_record)
+        db.commit()
+        logger.info("Analysis snapshot persisted for user %s", user.id)
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to persist analysis snapshot for user %s", user.id)
 
     return result

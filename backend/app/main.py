@@ -4,13 +4,21 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.exceptions import register_exception_handlers
+from app.logging_config import setup_logging
 from app.middleware.rate_limit import limiter
-from app.routers import analysis, auth, credit_cards, dashboard, expenses, goals, investments, transactions
+from app.routers import accounts, analysis, auth, credit_cards, dashboard, expenses, goals, investments, transactions
+
+setup_logging()
+
+API_V1_PREFIX = "/api/v1"
 
 app = FastAPI(title="FinPulse API", version="1.0.0")
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,14 +28,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(dashboard.router)
-app.include_router(expenses.router)
-app.include_router(credit_cards.router)
-app.include_router(investments.router)
-app.include_router(goals.router)
-app.include_router(transactions.router)
-app.include_router(analysis.router)
+app.include_router(auth.router, prefix=API_V1_PREFIX)
+app.include_router(dashboard.router, prefix=API_V1_PREFIX)
+app.include_router(expenses.router, prefix=API_V1_PREFIX)
+app.include_router(credit_cards.router, prefix=API_V1_PREFIX)
+app.include_router(investments.router, prefix=API_V1_PREFIX)
+app.include_router(goals.router, prefix=API_V1_PREFIX)
+app.include_router(transactions.router, prefix=API_V1_PREFIX)
+app.include_router(accounts.router, prefix=API_V1_PREFIX)
+app.include_router(analysis.router, prefix=API_V1_PREFIX)
 
 
 @app.get("/health")

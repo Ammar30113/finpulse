@@ -12,6 +12,14 @@ class AccountCreate(BaseModel):
     currency: str = "CAD"
 
 
+class AccountUpdate(BaseModel):
+    name: str | None = None
+    account_type: str | None = None
+    institution: str | None = None
+    balance: float | None = None
+    currency: str | None = None
+
+
 class AccountResponse(BaseModel):
     id: UUID
     user_id: UUID
@@ -23,3 +31,4 @@ class AccountResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+

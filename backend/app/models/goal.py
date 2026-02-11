@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from enum import Enum as PyEnum
 
 from sqlalchemy import Date, DateTime, Enum, ForeignKey, Numeric, String
@@ -7,6 +7,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class GoalType(str, PyEnum):
@@ -27,7 +31,7 @@ class Goal(Base):
     target_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     current_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     target_date: Mapped[date] = mapped_column(Date, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     user = relationship("User", back_populates="goals")
