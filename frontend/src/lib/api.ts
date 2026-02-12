@@ -1,5 +1,4 @@
-const normalizedPublicApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
-const API_URL = normalizedPublicApiUrl ? `${normalizedPublicApiUrl}/api/v1` : "/api/backend";
+const API_BASE_URL = "/api/backend";
 
 class ApiClient {
   private token: string | null = null;
@@ -30,7 +29,7 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
     if (res.status === 401) {
       this.setToken(null);
@@ -72,7 +71,7 @@ class ApiClient {
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_URL}${path}`, {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
       headers,
       body: formData,
