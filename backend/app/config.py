@@ -7,7 +7,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 60
     encryption_key: str
-    allowed_origins: str = "http://localhost:3000"
+    allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    allowed_origin_regex: str | None = r"https://.*\.vercel\.app"
+    cors_allow_credentials: bool = False
 
     model_config = {"env_file": ".env"}
 
@@ -18,6 +20,18 @@ class Settings(BaseSettings):
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
         return url
+
+    @property
+    def cors_origins(self) -> list[str]:
+        raw = self.allowed_origins.strip()
+        if raw == "*":
+            return ["*"]
+        return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
+
+    @property
+    def cors_origin_regex(self) -> str | None:
+        regex = (self.allowed_origin_regex or "").strip()
+        return regex or None
 
 
 settings = Settings()

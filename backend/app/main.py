@@ -22,8 +22,9 @@ register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in settings.allowed_origins.split(",")],
-    allow_credentials=True,
+    allow_origins=settings.cors_origins,
+    allow_origin_regex=settings.cors_origin_regex,
+    allow_credentials=settings.cors_allow_credentials and settings.cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -42,3 +43,8 @@ app.include_router(analysis.router, prefix=API_V1_PREFIX)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/")
+def root():
+    return {"name": "FinPulse API", "status": "ok", "health": "/health", "docs": "/docs"}

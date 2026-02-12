@@ -1,4 +1,5 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api/v1";
+const normalizedPublicApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
+const API_URL = normalizedPublicApiUrl ? `${normalizedPublicApiUrl}/api/v1` : "/api/backend";
 
 class ApiClient {
   private token: string | null = null;
