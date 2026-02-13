@@ -44,7 +44,7 @@ async function proxyRequest(request: NextRequest, path: string[]): Promise<NextR
   }
 }
 
-type RouteContext = { params: { path: string[] } | Promise<{ path: string[] }> };
+type RouteContext = { params: Promise<{ path: string[] }> };
 
 async function handle(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   const { path } = await context.params;
