@@ -11,6 +11,8 @@ _PASSWORD_MSG = (
     "Password must be at least 8 characters with 1 uppercase, "
     "1 lowercase, 1 digit, and 1 special character"
 )
+_PASSWORD_MAX_BYTES = 72
+_PASSWORD_MAX_BYTES_MSG = "Password must be 72 bytes or fewer"
 
 
 class LoginRequest(BaseModel):
@@ -26,6 +28,8 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def strong_password(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > _PASSWORD_MAX_BYTES:
+            raise ValueError(_PASSWORD_MAX_BYTES_MSG)
         if not _PASSWORD_PATTERN.match(v):
             raise ValueError(_PASSWORD_MSG)
         return v

@@ -60,9 +60,17 @@ def register_user(db: Session, email: str, password: str, full_name: str) -> Use
             detail="An account with this email already exists",
         )
 
+    try:
+        hashed_password = hash_password(password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     user = User(
         email=email,
-        hashed_password=hash_password(password),
+        hashed_password=hashed_password,
         full_name=full_name,
     )
     db.add(user)

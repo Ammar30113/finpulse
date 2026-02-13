@@ -140,12 +140,13 @@ export default function LoginPage() {
                 className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
                 placeholder="••••••••"
                 minLength={8}
+                maxLength={72}
                 pattern={"(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{}|;:'\\\",.<>/?`~]).{8,}"}
                 title="Use at least 8 characters with uppercase, lowercase, number, and special character."
               />
               {isRegister && (
                 <p className="mt-1 text-xs text-gray-500">
-                  Must include uppercase, lowercase, number, and special character.
+                  Must be 8-72 chars and include uppercase, lowercase, number, and special character.
                 </p>
               )}
             </div>

@@ -6,14 +6,26 @@ from passlib.context import CryptContext
 from app.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+MAX_BCRYPT_PASSWORD_BYTES = 72
+
+
+def _password_too_long(password: str) -> bool:
+    return len(password.encode("utf-8")) > MAX_BCRYPT_PASSWORD_BYTES
 
 
 def hash_password(password: str) -> str:
+    if _password_too_long(password):
+        raise ValueError(f"Password must be {MAX_BCRYPT_PASSWORD_BYTES} bytes or fewer")
     return pwd_context.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    if _password_too_long(plain):
+        return False
+    try:
+        return pwd_context.verify(plain, hashed)
+    except ValueError:
+        return False
 
 
 def create_access_token(subject: str | None = None, *, data: dict | None = None) -> str:
@@ -26,4 +38,3 @@ def create_access_token(subject: str | None = None, *, data: dict | None = None)
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiration_minutes)
     payload = {"sub": sub, "exp": expire}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
-
