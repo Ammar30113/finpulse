@@ -44,33 +44,56 @@ async function proxyRequest(request: NextRequest, path: string[]): Promise<NextR
   }
 }
 
-type RouteContext = { params: Promise<{ path: string[] }> };
-
-async function handle(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  const { path } = await context.params;
+export async function GET(
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
+  const params = await context.params;
+  const { path } = await params;
   return proxyRequest(request, path);
 }
 
-export async function GET(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return handle(request, context);
+export async function POST(
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
+  const params = await context.params;
+  const { path } = await params;
+  return proxyRequest(request, path);
 }
 
-export async function POST(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return handle(request, context);
+export async function PUT(
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
+  const params = await context.params;
+  const { path } = await params;
+  return proxyRequest(request, path);
 }
 
-export async function PUT(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return handle(request, context);
+export async function PATCH(
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
+  const params = await context.params;
+  const { path } = await params;
+  return proxyRequest(request, path);
 }
 
-export async function PATCH(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return handle(request, context);
+export async function DELETE(
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
+  const params = await context.params;
+  const { path } = await params;
+  return proxyRequest(request, path);
 }
 
-export async function DELETE(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return handle(request, context);
-}
-
-export async function OPTIONS(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  return handle(request, context);
+export async function OPTIONS(
+  request: NextRequest,
+  context: any
+): Promise<NextResponse> {
+  const params = await context.params;
+  const { path } = await params;
+  return proxyRequest(request, path);
 }
