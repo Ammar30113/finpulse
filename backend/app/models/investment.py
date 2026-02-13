@@ -26,7 +26,10 @@ class Investment(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
-    investment_type: Mapped[str] = mapped_column(Enum(InvestmentType), nullable=False)
+    investment_type: Mapped[str] = mapped_column(
+        Enum(InvestmentType, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
     institution: Mapped[str] = mapped_column(String(255), nullable=True)
     current_value: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     book_value: Mapped[float] = mapped_column(Numeric(12, 2), default=0)

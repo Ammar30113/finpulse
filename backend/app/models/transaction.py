@@ -25,7 +25,10 @@ class Transaction(Base):
     account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("accounts.id"), index=True, nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    transaction_type: Mapped[str] = mapped_column(Enum(TransactionType), nullable=False)
+    transaction_type: Mapped[str] = mapped_column(
+        Enum(TransactionType, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
     category: Mapped[str] = mapped_column(String(100), nullable=True)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     date: Mapped[date] = mapped_column(Date, nullable=False)

@@ -29,7 +29,10 @@ class Expense(Base):
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     is_recurring: Mapped[bool] = mapped_column(Boolean, default=False)
-    frequency: Mapped[str] = mapped_column(Enum(Frequency), nullable=True)
+    frequency: Mapped[str] = mapped_column(
+        Enum(Frequency, values_callable=lambda e: [x.value for x in e]),
+        nullable=True,
+    )
     next_due_date: Mapped[date] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

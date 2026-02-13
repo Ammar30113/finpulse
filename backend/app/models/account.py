@@ -25,7 +25,10 @@ class Account(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    account_type: Mapped[str] = mapped_column(Enum(AccountType), nullable=False)
+    account_type: Mapped[str] = mapped_column(
+        Enum(AccountType, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
     institution: Mapped[str] = mapped_column(String(255), nullable=True)
     balance: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     currency: Mapped[str] = mapped_column(String(3), default="CAD")

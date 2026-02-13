@@ -27,7 +27,10 @@ class Goal(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    goal_type: Mapped[str] = mapped_column(Enum(GoalType), nullable=False)
+    goal_type: Mapped[str] = mapped_column(
+        Enum(GoalType, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
     target_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     current_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     target_date: Mapped[date] = mapped_column(Date, nullable=True)
