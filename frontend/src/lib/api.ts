@@ -1,5 +1,22 @@
 const API_BASE_URL = "/api/backend";
 
+interface ApiErrorBody {
+  detail?: string;
+  errors?: Array<{ field: string; message: string }>;
+}
+
+function getErrorMessage(status: number, body: ApiErrorBody): string {
+  if (Array.isArray(body.errors) && body.errors.length > 0) {
+    const first = body.errors[0];
+    const label = first.field ? `${first.field}: ` : "";
+    return `${body.detail || "Validation error"} - ${label}${first.message}`;
+  }
+  if (body.detail) {
+    return body.detail;
+  }
+  return `Request failed: ${status}`;
+}
+
 class ApiClient {
   private token: string | null = null;
 
@@ -40,8 +57,8 @@ class ApiClient {
     }
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail || `Request failed: ${res.status}`);
+      const body = (await res.json().catch(() => ({}))) as ApiErrorBody;
+      throw new Error(getErrorMessage(res.status, body));
     }
 
     return res.json();
@@ -78,8 +95,8 @@ class ApiClient {
     });
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail || `Upload failed: ${res.status}`);
+      const body = (await res.json().catch(() => ({}))) as ApiErrorBody;
+      throw new Error(getErrorMessage(res.status, body));
     }
     return res.json() as T;
   }
