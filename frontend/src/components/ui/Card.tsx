@@ -8,16 +8,27 @@ interface CardProps {
 
 export function Card({ children, className, padding = true }: CardProps) {
   return (
-    <div className={clsx("rounded-xl bg-white shadow-sm border border-gray-100", padding && "p-5", className)}>
+    <div
+      className={clsx(
+        "rounded-2xl border bg-[var(--fp-surface)] shadow-[var(--fp-shadow)] backdrop-blur",
+        "border-[var(--fp-border)]",
+        padding && "p-6",
+        className
+      )}
+    >
       {children}
     </div>
   );
 }
 
 export function CardTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-sm font-medium text-gray-500 mb-3">{children}</h3>;
+  return (
+    <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--fp-text-muted)]">
+      {children}
+    </h3>
+  );
 }
 
 export function CardValue({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <p className={clsx("text-2xl font-semibold text-gray-900", className)}>{children}</p>;
+  return <p className={clsx("text-3xl font-semibold tracking-tight text-[var(--fp-text)]", className)}>{children}</p>;
 }

@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import clsx from "clsx";
 import { useAuth } from "@/hooks/useAuth";
-
-type Theme = "light" | "dark";
+import { useTheme } from "@/components/layout/ThemeProvider";
 
 const featureHighlights = [
   {
@@ -42,21 +41,7 @@ const operatingLoop = [
 
 export default function Home() {
   const { user } = useAuth();
-  const [theme, setTheme] = useState<Theme>("light");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("marketing_theme");
-    if (stored === "light" || stored === "dark") {
-      setTheme(stored);
-      return;
-    }
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setTheme(prefersDark ? "dark" : "light");
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("marketing_theme", theme);
-  }, [theme]);
+  const { theme, toggleTheme } = useTheme();
 
   const themeStyles = useMemo(() => {
     if (theme === "dark") {
@@ -139,7 +124,7 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={toggleTheme}
               className={clsx(
                 "group flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-colors",
                 themeStyles.ctaSecondary

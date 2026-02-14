@@ -12,15 +12,17 @@ export function NetWorthCard({ netWorth, assets, liabilities }: Props) {
   return (
     <Card>
       <CardTitle>Net Worth</CardTitle>
-      <CardValue className={netWorth >= 0 ? "text-gray-900" : "text-red-600"}>{fmt(netWorth)}</CardValue>
+      <CardValue className={netWorth >= 0 ? "text-[var(--fp-text)]" : "text-[var(--fp-negative)]"}>
+        {fmt(netWorth)}
+      </CardValue>
       <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
         <div>
-          <p className="text-gray-500">Assets</p>
-          <p className="font-medium text-green-600">{fmt(assets)}</p>
+          <p className="text-[var(--fp-text-muted)]">Assets</p>
+          <p className="font-semibold text-[var(--fp-positive)]">{fmt(assets)}</p>
         </div>
         <div>
-          <p className="text-gray-500">Liabilities</p>
-          <p className="font-medium text-red-600">{fmt(liabilities)}</p>
+          <p className="text-[var(--fp-text-muted)]">Liabilities</p>
+          <p className="font-semibold text-[var(--fp-negative)]">{fmt(liabilities)}</p>
         </div>
       </div>
     </Card>

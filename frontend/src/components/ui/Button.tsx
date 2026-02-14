@@ -7,10 +7,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500",
-  secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-brand-500",
-  danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
-  ghost: "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+  primary:
+    "bg-[var(--fp-text)] text-[var(--fp-bg)] hover:opacity-90 focus:ring-[var(--fp-text)]",
+  secondary:
+    "border border-[var(--fp-border)] bg-[var(--fp-surface)] text-[var(--fp-text-muted)] hover:bg-[var(--fp-surface-elev)] hover:text-[var(--fp-text)] focus:ring-[var(--fp-text)]",
+  danger:
+    "bg-[var(--fp-negative)] text-white hover:opacity-90 focus:ring-[var(--fp-negative)]",
+  ghost:
+    "text-[var(--fp-text-muted)] hover:bg-[var(--fp-surface-elev)] hover:text-[var(--fp-text)] focus:ring-[var(--fp-text-muted)]",
 };
 
 const sizes = {
@@ -23,7 +27,7 @@ export function Button({ variant = "primary", size = "md", className, children, 
   return (
     <button
       className={clsx(
-        "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center rounded-full font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--fp-bg)] disabled:cursor-not-allowed disabled:opacity-50",
         variants[variant],
         sizes[size],
         className

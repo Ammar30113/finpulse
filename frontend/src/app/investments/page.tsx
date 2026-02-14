@@ -21,11 +21,11 @@ const investmentTypes = [
 ];
 
 const typeBadgeColors: Record<string, string> = {
-  tfsa: "bg-green-100 text-green-700",
-  rrsp: "bg-blue-100 text-blue-700",
-  crypto: "bg-purple-100 text-purple-700",
-  brokerage: "bg-amber-100 text-amber-700",
-  other: "bg-gray-100 text-gray-700",
+  tfsa: "bg-[var(--fp-positive)]/15 text-[var(--fp-positive)]",
+  rrsp: "bg-[var(--fp-text)]/10 text-[var(--fp-text)]",
+  crypto: "bg-[var(--fp-warning)]/15 text-[var(--fp-warning)]",
+  brokerage: "bg-[var(--fp-text-muted)]/15 text-[var(--fp-text-muted)]",
+  other: "bg-[var(--fp-surface-elev)] text-[var(--fp-text-muted)]",
 };
 
 export default function InvestmentsPage() {
@@ -89,16 +89,23 @@ export default function InvestmentsPage() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen text-[var(--fp-text)]">
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 10% 14%, rgba(255,255,255,0.12), transparent 28%), radial-gradient(circle at 82% 8%, rgba(255,255,255,0.08), transparent 26%), linear-gradient(156deg, var(--fp-bg) 0%, var(--fp-bg-soft) 100%)",
+        }}
+      />
       <Sidebar />
-      <div className="flex-1 lg:ml-64">
+      <div className="relative z-10 flex-1 lg:ml-64">
         <Header title="Investments" />
-        <main className="p-4 lg:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Total: <span className="font-semibold text-gray-900">${totalValue.toLocaleString()}</span>
+        <main className="p-4 pb-8 lg:p-6">
+          <div className="mb-4 flex items-center justify-between rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] px-5 py-4 shadow-[var(--fp-shadow)] backdrop-blur">
+            <div className="text-sm text-[var(--fp-text-muted)]">
+              Total: <span className="font-semibold text-[var(--fp-text)]">${totalValue.toLocaleString()}</span>
               {" "}
-              <span className={clsx("font-medium", totalGainLoss >= 0 ? "text-green-600" : "text-red-600")}>
+              <span className={clsx("font-medium", totalGainLoss >= 0 ? "text-[var(--fp-positive)]" : "text-[var(--fp-negative)]")}>
                 ({totalGainLoss >= 0 ? "+" : ""}{totalGainLoss.toLocaleString()})
               </span>
             </div>
@@ -106,7 +113,7 @@ export default function InvestmentsPage() {
           </div>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+            <div className="mb-4 rounded-xl border border-[var(--fp-negative)]/35 bg-[var(--fp-negative)]/10 p-3 text-sm text-[var(--fp-negative)]">
               {error}
             </div>
           )}
@@ -114,33 +121,38 @@ export default function InvestmentsPage() {
           {loading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-40 animate-pulse rounded-xl bg-white shadow-sm" />
+                <div key={i} className="h-40 animate-pulse rounded-2xl bg-[var(--fp-surface)]" />
               ))}
             </div>
           ) : investments.length === 0 ? (
-            <div className="rounded-xl bg-white p-12 text-center shadow-sm">
-              <p className="text-gray-400">No investments tracked yet.</p>
+            <div className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] p-12 text-center shadow-[var(--fp-shadow)]">
+              <p className="text-[var(--fp-text-soft)]">No investments tracked yet.</p>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {investments.map((inv) => (
-                <div key={inv.id} className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+                <div key={inv.id} className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] p-5 shadow-[var(--fp-shadow)]">
                   <div className="flex items-start justify-between mb-3">
                     <span className={clsx("rounded-full px-2.5 py-0.5 text-xs font-medium", typeBadgeColors[inv.investment_type] || typeBadgeColors.other)}>
                       {inv.investment_type.toUpperCase()}
                     </span>
-                    <button onClick={() => handleDelete(inv.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                    <button
+                      onClick={() => handleDelete(inv.id)}
+                      className="text-xs font-medium text-[var(--fp-negative)] transition-colors hover:opacity-80"
+                    >
+                      Delete
+                    </button>
                   </div>
-                  {inv.institution && <p className="text-sm text-gray-500 mb-2">{inv.institution}</p>}
-                  <p className="text-2xl font-semibold text-gray-900">${inv.current_value.toLocaleString()}</p>
+                  {inv.institution && <p className="mb-2 text-sm text-[var(--fp-text-muted)]">{inv.institution}</p>}
+                  <p className="text-2xl font-semibold text-[var(--fp-text)]">${inv.current_value.toLocaleString()}</p>
                   <div className="mt-2 flex items-center gap-4 text-sm">
-                    <span className="text-gray-500">Book: ${inv.book_value.toLocaleString()}</span>
-                    <span className={clsx("font-medium", inv.gain_loss >= 0 ? "text-green-600" : "text-red-600")}>
+                    <span className="text-[var(--fp-text-muted)]">Book: ${inv.book_value.toLocaleString()}</span>
+                    <span className={clsx("font-medium", inv.gain_loss >= 0 ? "text-[var(--fp-positive)]" : "text-[var(--fp-negative)]")}>
                       {inv.gain_loss >= 0 ? "+" : ""}{inv.gain_loss.toLocaleString()}
                     </span>
                   </div>
                   {inv.monthly_contribution > 0 && (
-                    <p className="mt-2 text-xs text-gray-400">${inv.monthly_contribution}/mo contribution</p>
+                    <p className="mt-2 text-xs text-[var(--fp-text-soft)]">${inv.monthly_contribution}/mo contribution</p>
                   )}
                 </div>
               ))}

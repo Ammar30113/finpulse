@@ -23,12 +23,12 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <div className="flex min-h-screen items-center justify-center bg-[var(--fp-bg)] p-6">
+          <div className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] px-8 py-7 text-center shadow-[var(--fp-shadow)]">
+            <h2 className="text-xl font-semibold text-[var(--fp-text)]">
               Something went wrong
             </h2>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-[var(--fp-text-muted)]">
               Please try refreshing the page.
             </p>
             <button
@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false });
                 window.location.reload();
               }}
-              className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              className="mt-4 rounded-full bg-[var(--fp-text)] px-4 py-2 text-sm font-medium text-[var(--fp-bg)] transition-opacity hover:opacity-90"
             >
               Refresh
             </button>

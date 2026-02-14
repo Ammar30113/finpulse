@@ -18,12 +18,22 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-gray-200 bg-white lg:block">
-      <div className="flex h-16 items-center gap-2 border-b border-gray-200 px-6">
-        <div className="h-8 w-8 rounded-lg bg-brand-600 flex items-center justify-center">
-          <span className="text-white font-bold text-sm">FP</span>
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-[var(--fp-border)] bg-[var(--fp-surface)]/95 backdrop-blur-xl lg:block">
+      <div className="flex h-16 items-center gap-3 border-b border-[var(--fp-border)] px-6">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--fp-border)] bg-[var(--fp-surface-elev)] text-xs font-semibold tracking-[0.2em] text-[var(--fp-text)]">
+          FP
         </div>
-        <span className="text-lg font-semibold text-gray-900">FinPulse</span>
+        <div>
+          <p
+            className="text-lg font-semibold leading-none tracking-tight text-[var(--fp-text)]"
+            style={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif' }}
+          >
+            FinPulse
+          </p>
+          <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--fp-text-soft)]">
+            Finance OS
+          </p>
+        </div>
       </div>
       <nav className="mt-4 space-y-1 px-3">
         {navItems.map((item) => {
@@ -33,10 +43,10 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={clsx(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
                 active
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  ? "border border-[var(--fp-border)] bg-[var(--fp-surface-elev)] text-[var(--fp-text)]"
+                  : "text-[var(--fp-text-muted)] hover:bg-[var(--fp-surface-elev)] hover:text-[var(--fp-text)]"
               )}
             >
               <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -47,6 +57,11 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <div className="absolute inset-x-0 bottom-0 border-t border-[var(--fp-border)] px-6 py-4">
+        <p className="text-xs leading-relaxed text-[var(--fp-text-soft)]">
+          Weekly goal: complete one action that moves your finances forward.
+        </p>
+      </div>
     </aside>
   );
 }

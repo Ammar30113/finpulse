@@ -15,19 +15,23 @@ export function GoalsProgress({ goals }: Props) {
           {goals.slice(0, 4).map((g) => (
             <li key={g.id}>
               <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-gray-900 truncate">{g.title}</span>
-                <span className="text-gray-500">{g.progress_pct.toFixed(0)}%</span>
+                <span className="truncate font-semibold text-[var(--fp-text)]">{g.title}</span>
+                <span className="text-[var(--fp-text-muted)]">{g.progress_pct.toFixed(0)}%</span>
               </div>
-              <div className="h-2 rounded-full bg-gray-100">
+              <div className="h-2 rounded-full bg-[var(--fp-surface-elev)]">
                 <div
                   className={clsx(
                     "h-2 rounded-full transition-all",
-                    g.progress_pct >= 75 ? "bg-green-500" : g.progress_pct >= 40 ? "bg-brand-500" : "bg-amber-500"
+                    g.progress_pct >= 75
+                      ? "bg-[var(--fp-positive)]"
+                      : g.progress_pct >= 40
+                      ? "bg-[var(--fp-text)]"
+                      : "bg-[var(--fp-warning)]"
                   )}
                   style={{ width: `${Math.min(g.progress_pct, 100)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="mt-1 flex justify-between text-xs text-[var(--fp-text-soft)]">
                 <span>${g.current_amount.toLocaleString()}</span>
                 <span>${g.target_amount.toLocaleString()}</span>
               </div>
@@ -35,7 +39,7 @@ export function GoalsProgress({ goals }: Props) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-gray-400">No goals set yet</p>
+        <p className="text-sm text-[var(--fp-text-soft)]">No goals set yet</p>
       )}
     </Card>
   );

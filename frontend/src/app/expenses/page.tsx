@@ -90,18 +90,25 @@ export default function ExpensesPage() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen text-[var(--fp-text)]">
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 10% 14%, rgba(255,255,255,0.12), transparent 28%), radial-gradient(circle at 82% 8%, rgba(255,255,255,0.08), transparent 26%), linear-gradient(156deg, var(--fp-bg) 0%, var(--fp-bg-soft) 100%)",
+        }}
+      />
       <Sidebar />
-      <div className="flex-1 lg:ml-64">
+      <div className="relative z-10 flex-1 lg:ml-64">
         <Header title="Expenses" />
-        <main className="p-4 lg:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500">{expenses.length} expense(s)</p>
+        <main className="p-4 pb-8 lg:p-6">
+          <div className="mb-4 flex items-center justify-between rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] px-5 py-4 shadow-[var(--fp-shadow)] backdrop-blur">
+            <p className="text-sm text-[var(--fp-text-muted)]">{expenses.length} expense(s)</p>
             <Button onClick={() => setShowForm(true)}>Add Expense</Button>
           </div>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+            <div className="mb-4 rounded-xl border border-[var(--fp-negative)]/35 bg-[var(--fp-negative)]/10 p-3 text-sm text-[var(--fp-negative)]">
               {error}
             </div>
           )}
@@ -109,18 +116,18 @@ export default function ExpensesPage() {
           {loading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 animate-pulse rounded-lg bg-white shadow-sm" />
+                <div key={i} className="h-16 animate-pulse rounded-xl bg-[var(--fp-surface)]" />
               ))}
             </div>
           ) : expenses.length === 0 ? (
-            <div className="rounded-xl bg-white p-12 text-center shadow-sm">
-              <p className="text-gray-400">No expenses yet. Add your first expense to start tracking.</p>
+            <div className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] p-12 text-center shadow-[var(--fp-shadow)]">
+              <p className="text-[var(--fp-text-soft)]">No expenses yet. Add your first expense to start tracking.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] shadow-[var(--fp-shadow)]">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <tr className="border-b border-[var(--fp-border)] text-left text-xs font-semibold uppercase tracking-[0.2em] text-[var(--fp-text-muted)]">
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3">Description</th>
                     <th className="px-4 py-3 text-right">Amount</th>
@@ -129,22 +136,25 @@ export default function ExpensesPage() {
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-[var(--fp-border)]/50">
                   {expenses.map((exp) => (
-                    <tr key={exp.id} className="hover:bg-gray-50">
+                    <tr key={exp.id} className="hover:bg-[var(--fp-surface-elev)]/60">
                       <td className="px-4 py-3">
-                        <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700">
+                        <span className="rounded-full border border-[var(--fp-border)] bg-[var(--fp-surface-elev)] px-2.5 py-0.5 text-xs font-medium text-[var(--fp-text-muted)]">
                           {exp.category}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{exp.description || "—"}</td>
-                      <td className="px-4 py-3 text-right font-medium">${exp.amount.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-gray-500">
+                      <td className="px-4 py-3 text-[var(--fp-text-muted)]">{exp.description || "—"}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-[var(--fp-text)]">${exp.amount.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-[var(--fp-text-muted)]">
                         {exp.is_recurring ? exp.frequency : "One-time"}
                       </td>
-                      <td className="px-4 py-3 text-gray-500">{exp.next_due_date || "—"}</td>
+                      <td className="px-4 py-3 text-[var(--fp-text-muted)]">{exp.next_due_date || "—"}</td>
                       <td className="px-4 py-3">
-                        <button onClick={() => handleDelete(exp.id)} className="text-red-500 hover:text-red-700 text-xs">
+                        <button
+                          onClick={() => handleDelete(exp.id)}
+                          className="text-xs font-medium text-[var(--fp-negative)] transition-colors hover:opacity-80"
+                        >
                           Delete
                         </button>
                       </td>
@@ -161,7 +171,12 @@ export default function ExpensesPage() {
               <Input label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               <Input label="Amount" type="number" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.is_recurring} onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })} className="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
+                <input
+                  type="checkbox"
+                  checked={form.is_recurring}
+                  onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })}
+                  className="rounded border-[var(--fp-border)] bg-[var(--fp-surface-solid)] text-[var(--fp-text)] focus:ring-[var(--fp-text)]"
+                />
                 Recurring expense
               </label>
               {form.is_recurring && (

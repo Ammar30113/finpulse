@@ -11,20 +11,20 @@ export function Input({ label, error, className, id, ...props }: InputProps) {
   return (
     <div className="space-y-1">
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className="block text-sm font-medium text-[var(--fp-text-muted)]">
           {label}
         </label>
       )}
       <input
         id={inputId}
         className={clsx(
-          "block w-full rounded-lg border-gray-300 shadow-sm transition-colors focus:border-brand-500 focus:ring-brand-500 sm:text-sm",
-          error && "border-red-300 focus:border-red-500 focus:ring-red-500",
+          "block w-full rounded-xl border border-[var(--fp-border)] bg-[var(--fp-surface-solid)] px-3 py-2.5 text-[15px] text-[var(--fp-text)] shadow-sm transition-colors placeholder:text-[var(--fp-text-soft)] focus:border-[var(--fp-text)] focus:ring-[var(--fp-text)]",
+          error && "border-[var(--fp-negative)]/70 focus:border-[var(--fp-negative)] focus:ring-[var(--fp-negative)]",
           className
         )}
         {...props}
       />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-[var(--fp-negative)]">{error}</p>}
     </div>
   );
 }
@@ -39,14 +39,14 @@ export function Select({ label, options, className, id, ...props }: SelectProps)
   return (
     <div className="space-y-1">
       {label && (
-        <label htmlFor={selectId} className="block text-sm font-medium text-gray-700">
+        <label htmlFor={selectId} className="block text-sm font-medium text-[var(--fp-text-muted)]">
           {label}
         </label>
       )}
       <select
         id={selectId}
         className={clsx(
-          "block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm",
+          "block w-full rounded-xl border border-[var(--fp-border)] bg-[var(--fp-surface-solid)] px-3 py-2.5 text-[15px] text-[var(--fp-text)] shadow-sm transition-colors focus:border-[var(--fp-text)] focus:ring-[var(--fp-text)]",
           className
         )}
         {...props}

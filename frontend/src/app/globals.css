@@ -2,9 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --fp-bg: #f4f4ef;
+  --fp-bg-soft: #ecebe4;
+  --fp-surface: rgba(255, 255, 255, 0.84);
+  --fp-surface-solid: #ffffff;
+  --fp-surface-elev: #f8f8f3;
+  --fp-border: rgba(20, 20, 20, 0.12);
+  --fp-text: #101113;
+  --fp-text-muted: #565b63;
+  --fp-text-soft: #7b818a;
+  --fp-positive: #0f7a4d;
+  --fp-negative: #b42318;
+  --fp-warning: #9a6700;
+  --fp-shadow: 0 22px 44px rgba(12, 12, 12, 0.08);
+}
+
+:root[data-theme="dark"] {
+  --fp-bg: #080808;
+  --fp-bg-soft: #111111;
+  --fp-surface: rgba(18, 18, 18, 0.84);
+  --fp-surface-solid: #111111;
+  --fp-surface-elev: #1a1a1a;
+  --fp-border: rgba(255, 255, 255, 0.14);
+  --fp-text: #f4f4f4;
+  --fp-text-muted: #b5b5b5;
+  --fp-text-soft: #8b8b8b;
+  --fp-positive: #4ade80;
+  --fp-negative: #fb7185;
+  --fp-warning: #fbbf24;
+  --fp-shadow: 0 24px 56px rgba(0, 0, 0, 0.45);
+}
+
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply antialiased;
+    background-color: var(--fp-bg);
+    color: var(--fp-text);
   }
 }
 

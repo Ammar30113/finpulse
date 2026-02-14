@@ -1,23 +1,57 @@
+"use client";
+
+import { clsx } from "clsx";
+import { useTheme } from "@/components/layout/ThemeProvider";
+
 interface HeaderProps {
   title: string;
   onRefresh?: () => void;
 }
 
 export function Header({ title, onRefresh }: HeaderProps) {
+  const { theme, toggleTheme } = useTheme();
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white/80 backdrop-blur-sm px-4 lg:px-6">
-      <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-      {onRefresh && (
-        <button
-          onClick={onRefresh}
-          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-          title="Refresh"
+    <header className="sticky top-0 z-30 border-b border-[var(--fp-border)] bg-[var(--fp-surface)]/90 px-4 backdrop-blur-xl lg:px-6">
+      <div className="flex h-16 items-center justify-between">
+        <h1
+          className="text-2xl leading-none tracking-tight text-[var(--fp-text)]"
+          style={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif' }}
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-          </svg>
-        </button>
-      )}
+          {title}
+        </h1>
+        <div className="flex items-center gap-2">
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              className="rounded-full border border-[var(--fp-border)] px-3 py-2 text-xs font-medium text-[var(--fp-text-muted)] transition-colors hover:bg-[var(--fp-surface-elev)] hover:text-[var(--fp-text)]"
+              title="Refresh"
+            >
+              Refresh
+            </button>
+          )}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 rounded-full border border-[var(--fp-border)] px-3 py-2 text-xs font-medium text-[var(--fp-text-muted)] transition-colors hover:bg-[var(--fp-surface-elev)] hover:text-[var(--fp-text)]"
+            title="Switch theme"
+          >
+            <span>{theme === "dark" ? "Dark" : "Light"}</span>
+            <span
+              className={clsx(
+                "relative h-4 w-8 rounded-full transition-colors",
+                theme === "dark" ? "bg-white/30" : "bg-black/20"
+              )}
+            >
+              <span
+                className={clsx(
+                  "absolute top-0.5 h-3 w-3 rounded-full transition-all",
+                  theme === "dark" ? "left-4 bg-white" : "left-0.5 bg-black"
+                )}
+              />
+            </span>
+          </button>
+        </div>
+      </div>
     </header>
   );
 }

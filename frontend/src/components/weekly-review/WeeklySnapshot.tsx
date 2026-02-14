@@ -31,16 +31,16 @@ function MetricCard({ label, value, change, invertColor }: MetricCardProps) {
 
   return (
     <Card>
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
+      <p className="text-sm font-medium text-[var(--fp-text-muted)]">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-[var(--fp-text)]">{value}</p>
       {hasChange && (
         <div className="mt-2 flex items-center gap-1">
           <span
             className={clsx(
               "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
               isGood
-                ? "bg-green-50 text-green-700"
-                : "bg-red-50 text-red-700"
+                ? "bg-[var(--fp-positive)]/15 text-[var(--fp-positive)]"
+                : "bg-[var(--fp-negative)]/15 text-[var(--fp-negative)]"
             )}
           >
             {isPositive ? "\u2191" : "\u2193"}{" "}
@@ -51,7 +51,7 @@ function MetricCard({ label, value, change, invertColor }: MetricCardProps) {
             })}
             {change!.pct != null && ` (${Math.abs(change!.pct).toFixed(1)}%)`}
           </span>
-          <span className="text-xs text-gray-400">vs last week</span>
+          <span className="text-xs text-[var(--fp-text-soft)]">vs last week</span>
         </div>
       )}
     </Card>
@@ -61,7 +61,10 @@ function MetricCard({ label, value, change, invertColor }: MetricCardProps) {
 export function WeeklySnapshot({ snapshot, changes, weekStart, weekEnd }: Props) {
   return (
     <div>
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">
+      <h2
+        className="mb-4 text-2xl font-semibold tracking-tight text-[var(--fp-text)]"
+        style={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif' }}
+      >
         Week of {formatDate(weekStart)} &ndash; {formatDate(weekEnd)}
       </h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

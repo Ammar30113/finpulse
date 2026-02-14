@@ -14,17 +14,17 @@ export function UpcomingBills({ bills }: Props) {
           {bills.slice(0, 5).map((bill, i) => (
             <li key={i} className="flex items-center justify-between text-sm">
               <div>
-                <p className="font-medium text-gray-900">{bill.description}</p>
-                <p className="text-gray-500">{bill.category} &middot; {bill.due_date}</p>
+                <p className="font-semibold text-[var(--fp-text)]">{bill.description}</p>
+                <p className="text-[var(--fp-text-muted)]">{bill.category} &middot; {bill.due_date}</p>
               </div>
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-[var(--fp-text)]">
                 ${bill.amount.toLocaleString()}
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-gray-400">No upcoming bills in the next 30 days</p>
+        <p className="text-sm text-[var(--fp-text-soft)]">No upcoming bills in the next 30 days</p>
       )}
     </Card>
   );

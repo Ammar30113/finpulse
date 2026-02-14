@@ -85,18 +85,25 @@ export default function CreditCardsPage() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen text-[var(--fp-text)]">
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 10% 14%, rgba(255,255,255,0.12), transparent 28%), radial-gradient(circle at 82% 8%, rgba(255,255,255,0.08), transparent 26%), linear-gradient(156deg, var(--fp-bg) 0%, var(--fp-bg-soft) 100%)",
+        }}
+      />
       <Sidebar />
-      <div className="flex-1 lg:ml-64">
+      <div className="relative z-10 flex-1 lg:ml-64">
         <Header title="Credit Cards" />
-        <main className="p-4 lg:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-gray-500">{cards.length} card(s)</p>
+        <main className="p-4 pb-8 lg:p-6">
+          <div className="mb-4 flex items-center justify-between rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] px-5 py-4 shadow-[var(--fp-shadow)] backdrop-blur">
+            <p className="text-sm text-[var(--fp-text-muted)]">{cards.length} card(s)</p>
             <Button onClick={() => setShowForm(true)}>Add Credit Card</Button>
           </div>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+            <div className="mb-4 rounded-xl border border-[var(--fp-negative)]/35 bg-[var(--fp-negative)]/10 p-3 text-sm text-[var(--fp-negative)]">
               {error}
             </div>
           )}
@@ -104,47 +111,54 @@ export default function CreditCardsPage() {
           {loading ? (
             <div className="grid gap-4 md:grid-cols-2">
               {[1, 2].map((i) => (
-                <div key={i} className="h-48 animate-pulse rounded-xl bg-white shadow-sm" />
+                <div key={i} className="h-48 animate-pulse rounded-2xl bg-[var(--fp-surface)]" />
               ))}
             </div>
           ) : cards.length === 0 ? (
-            <div className="rounded-xl bg-white p-12 text-center shadow-sm">
-              <p className="text-gray-400">No credit cards added yet.</p>
+            <div className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] p-12 text-center shadow-[var(--fp-shadow)]">
+              <p className="text-[var(--fp-text-soft)]">No credit cards added yet.</p>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {cards.map((card) => {
                 const util = card.credit_limit > 0 ? (card.current_balance / card.credit_limit) * 100 : 0;
-                const barColor = util > 75 ? "bg-red-500" : util > 30 ? "bg-amber-500" : "bg-green-500";
-                const textColor = util > 75 ? "text-red-600" : util > 30 ? "text-amber-600" : "text-green-600";
+                const barColor =
+                  util > 75 ? "bg-[var(--fp-negative)]" : util > 30 ? "bg-[var(--fp-warning)]" : "bg-[var(--fp-positive)]";
+                const textColor =
+                  util > 75 ? "text-[var(--fp-negative)]" : util > 30 ? "text-[var(--fp-warning)]" : "text-[var(--fp-positive)]";
 
                 return (
-                  <div key={card.id} className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+                  <div key={card.id} className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] p-5 shadow-[var(--fp-shadow)]">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-gray-900">{card.name}</h3>
-                        {card.issuer && <p className="text-sm text-gray-500">{card.issuer}</p>}
+                        <h3 className="font-semibold text-[var(--fp-text)]">{card.name}</h3>
+                        {card.issuer && <p className="text-sm text-[var(--fp-text-muted)]">{card.issuer}</p>}
                       </div>
-                      <button onClick={() => handleDelete(card.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                      <button
+                        onClick={() => handleDelete(card.id)}
+                        className="text-xs font-medium text-[var(--fp-negative)] transition-colors hover:opacity-80"
+                      >
+                        Delete
+                      </button>
                     </div>
 
                     <div className="flex items-baseline justify-between mb-2">
-                      <span className="text-2xl font-semibold text-gray-900">
+                      <span className="text-2xl font-semibold text-[var(--fp-text)]">
                         ${card.current_balance.toLocaleString()}
                       </span>
-                      <span className="text-sm text-gray-500">/ ${card.credit_limit.toLocaleString()}</span>
+                      <span className="text-sm text-[var(--fp-text-muted)]">/ ${card.credit_limit.toLocaleString()}</span>
                     </div>
 
                     <div className="mb-3">
                       <div className="flex justify-between text-xs mb-1">
                         <span className={clsx("font-medium", textColor)}>{util.toFixed(0)}% utilized</span>
                       </div>
-                      <div className="h-2 rounded-full bg-gray-100">
+                      <div className="h-2 rounded-full bg-[var(--fp-surface-elev)]">
                         <div className={clsx("h-2 rounded-full transition-all", barColor)} style={{ width: `${Math.min(util, 100)}%` }} />
                       </div>
                     </div>
 
-                    <div className="flex gap-4 text-xs text-gray-500 mb-3">
+                    <div className="mb-3 flex gap-4 text-xs text-[var(--fp-text-muted)]">
                       <span>Statement: Day {card.statement_day}</span>
                       <span>Due: Day {card.due_day}</span>
                       {card.apr && <span>APR: {card.apr}%</span>}
@@ -157,7 +171,7 @@ export default function CreditCardsPage() {
                           step="0.01"
                           value={editBalance}
                           onChange={(e) => setEditBalance(e.target.value)}
-                          className="flex-1 rounded-lg border-gray-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                          className="flex-1 rounded-xl border border-[var(--fp-border)] bg-[var(--fp-surface-solid)] px-3 py-2 text-sm text-[var(--fp-text)] focus:border-[var(--fp-text)] focus:ring-[var(--fp-text)]"
                           placeholder="New balance"
                         />
                         <Button size="sm" onClick={() => handleUpdateBalance(card.id)}>Save</Button>

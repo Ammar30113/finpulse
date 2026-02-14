@@ -13,19 +13,19 @@ interface Props {
 }
 
 const borderColors: Record<string, string> = {
-  pay_credit_card: "border-l-red-500",
-  fund_goal: "border-l-brand-500",
-  reduce_spending: "border-l-amber-500",
-  build_emergency_fund: "border-l-green-500",
-  review_transactions: "border-l-gray-400",
+  pay_credit_card: "border-l-[var(--fp-negative)]",
+  fund_goal: "border-l-[var(--fp-text)]",
+  reduce_spending: "border-l-[var(--fp-warning)]",
+  build_emergency_fund: "border-l-[var(--fp-positive)]",
+  review_transactions: "border-l-[var(--fp-text-soft)]",
 };
 
 const badgeColors: Record<string, string> = {
-  pay_credit_card: "bg-red-50 text-red-700",
-  fund_goal: "bg-blue-50 text-brand-700",
-  reduce_spending: "bg-amber-50 text-amber-700",
-  build_emergency_fund: "bg-green-50 text-green-700",
-  review_transactions: "bg-gray-50 text-gray-700",
+  pay_credit_card: "bg-[var(--fp-negative)]/15 text-[var(--fp-negative)]",
+  fund_goal: "bg-[var(--fp-text)]/10 text-[var(--fp-text)]",
+  reduce_spending: "bg-[var(--fp-warning)]/15 text-[var(--fp-warning)]",
+  build_emergency_fund: "bg-[var(--fp-positive)]/15 text-[var(--fp-positive)]",
+  review_transactions: "bg-[var(--fp-surface-elev)] text-[var(--fp-text-muted)]",
 };
 
 const fmt = (n: number) =>
@@ -35,7 +35,7 @@ export function WeeklyAction({ action, completing, onComplete, onSkip }: Props) 
   const isCompleted = action.status === "completed";
   const isSkipped = action.status === "skipped";
   const isDone = isCompleted || isSkipped;
-  const border = borderColors[action.type] || "border-l-gray-400";
+  const border = borderColors[action.type] || "border-l-[var(--fp-text-soft)]";
 
   return (
     <Card
@@ -43,8 +43,8 @@ export function WeeklyAction({ action, completing, onComplete, onSkip }: Props) 
       className={clsx(
         "border-l-4 overflow-hidden",
         border,
-        isCompleted && "bg-green-50/50",
-        isSkipped && "bg-gray-50/50"
+        isCompleted && "bg-[var(--fp-positive)]/10",
+        isSkipped && "bg-[var(--fp-surface-elev)]"
       )}
     >
       <div className="p-5 sm:p-6">
@@ -54,9 +54,9 @@ export function WeeklyAction({ action, completing, onComplete, onSkip }: Props) 
               "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
               isDone
                 ? isCompleted
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-600"
-                : "bg-brand-50 text-brand-700"
+                  ? "bg-[var(--fp-positive)]/15 text-[var(--fp-positive)]"
+                  : "bg-[var(--fp-surface-elev)] text-[var(--fp-text-muted)]"
+                : "bg-[var(--fp-text)]/10 text-[var(--fp-text)]"
             )}
           >
             {isCompleted
@@ -69,7 +69,7 @@ export function WeeklyAction({ action, completing, onComplete, onSkip }: Props) 
             <span
               className={clsx(
                 "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                badgeColors[action.type] || "bg-gray-50 text-gray-700"
+                badgeColors[action.type] || "bg-[var(--fp-surface-elev)] text-[var(--fp-text-muted)]"
               )}
             >
               {fmt(action.target_amount)}
@@ -77,10 +77,10 @@ export function WeeklyAction({ action, completing, onComplete, onSkip }: Props) 
           )}
         </div>
 
-        <h3 className="text-xl font-semibold text-gray-900">{action.title}</h3>
+        <h3 className="text-2xl font-semibold tracking-tight text-[var(--fp-text)]">{action.title}</h3>
 
         {action.detail && (
-          <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+          <p className="mt-2 text-sm leading-relaxed text-[var(--fp-text-muted)]">
             {action.detail}
           </p>
         )}
