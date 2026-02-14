@@ -6,6 +6,10 @@ const rawBackendUrl =
   process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const backendBaseUrl = rawBackendUrl.replace(/\/+$/, "");
 
+type RouteContext = {
+  params: Promise<{ path: string[] }>;
+};
+
 function buildTargetUrl(request: NextRequest, path: string[]): string {
   const suffix = path.length > 0 ? `/${path.join("/")}` : "";
   return `${backendBaseUrl}/api/v1${suffix}${request.nextUrl.search}`;
@@ -44,56 +48,58 @@ async function proxyRequest(request: NextRequest, path: string[]): Promise<NextR
   }
 }
 
+async function getPathFromContext(context: RouteContext): Promise<string[]> {
+  const params = await context.params;
+  if (!params.path) {
+    return [];
+  }
+  return params.path;
+}
+
 export async function GET(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ): Promise<NextResponse> {
-  const params = await context.params;
-  const { path } = await params;
+  const path = await getPathFromContext(context);
   return proxyRequest(request, path);
 }
 
 export async function POST(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ): Promise<NextResponse> {
-  const params = await context.params;
-  const { path } = await params;
+  const path = await getPathFromContext(context);
   return proxyRequest(request, path);
 }
 
 export async function PUT(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ): Promise<NextResponse> {
-  const params = await context.params;
-  const { path } = await params;
+  const path = await getPathFromContext(context);
   return proxyRequest(request, path);
 }
 
 export async function PATCH(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ): Promise<NextResponse> {
-  const params = await context.params;
-  const { path } = await params;
+  const path = await getPathFromContext(context);
   return proxyRequest(request, path);
 }
 
 export async function DELETE(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ): Promise<NextResponse> {
-  const params = await context.params;
-  const { path } = await params;
+  const path = await getPathFromContext(context);
   return proxyRequest(request, path);
 }
 
 export async function OPTIONS(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ): Promise<NextResponse> {
-  const params = await context.params;
-  const { path } = await params;
+  const path = await getPathFromContext(context);
   return proxyRequest(request, path);
 }

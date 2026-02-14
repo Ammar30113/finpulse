@@ -39,9 +39,13 @@ class ApiClient {
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = this.getToken();
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
       ...(options.headers as Record<string, string>),
     };
+    const hasBody = options.body !== undefined && options.body !== null;
+    const hasContentType = Object.keys(headers).some((key) => key.toLowerCase() === "content-type");
+    if (hasBody && !hasContentType && !(options.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -61,7 +65,16 @@ class ApiClient {
       throw new Error(getErrorMessage(res.status, body));
     }
 
-    return res.json();
+    if (res.status === 204 || res.status === 205) {
+      return undefined as T;
+    }
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      return (await res.json()) as T;
+    }
+
+    return (await res.text()) as T;
   }
 
   get<T>(path: string) {
@@ -97,6 +110,9 @@ class ApiClient {
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as ApiErrorBody;
       throw new Error(getErrorMessage(res.status, body));
+    }
+    if (res.status === 204 || res.status === 205) {
+      return undefined as T;
     }
     return res.json() as T;
   }
