@@ -29,3 +29,4 @@ class User(Base):
     investments = relationship("Investment", back_populates="user", cascade="all, delete-orphan")
     goals = relationship("Goal", back_populates="user", cascade="all, delete-orphan")
     installment_plans = relationship("InstallmentPlan", back_populates="user", cascade="all, delete-orphan")
+    weekly_reviews = relationship("WeeklyReview", back_populates="user", cascade="all, delete-orphan")

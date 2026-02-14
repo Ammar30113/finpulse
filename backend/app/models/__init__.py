@@ -7,6 +7,7 @@ from app.models.installment_plan import InstallmentPlan
 from app.models.investment import Investment
 from app.models.transaction import Transaction
 from app.models.user import User
+from app.models.weekly_review import WeeklyReview
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "Investment",
     "Goal",
     "AnalysisResult",
+    "WeeklyReview",
 ]

@@ -129,3 +129,56 @@ export interface AnalysisResponse {
   recommendations: AnalysisRecommendation[];
   summary: string;
 }
+
+export interface MetricChange {
+  absolute: number;
+  pct: number | null;
+}
+
+export interface WeeklyChanges {
+  net_worth_change: MetricChange;
+  spending_change: MetricChange;
+  savings_change: MetricChange;
+  utilization_change: MetricChange;
+}
+
+export interface WeeklySnapshotData {
+  net_worth: number;
+  total_assets: number;
+  total_liabilities: number;
+  monthly_income: number;
+  monthly_expenses: number;
+  cash_flow: number;
+  credit_utilization_pct: number;
+  savings_balance: number;
+  weekly_spending: number;
+  weekly_income: number;
+}
+
+export interface WeeklyAction {
+  type: string;
+  title: string;
+  detail: string | null;
+  target_amount: number | null;
+  target_name: string | null;
+  status: string;
+  completed_at: string | null;
+}
+
+export interface WeeklyReview {
+  id: string;
+  week_start: string;
+  week_end: string;
+  snapshot: WeeklySnapshotData;
+  changes: WeeklyChanges | null;
+  action: WeeklyAction;
+  created_at: string;
+}
+
+export interface WeeklyReviewHistory {
+  reviews: WeeklyReview[];
+  wacr: number;
+  current_streak: number;
+  total_completed: number;
+  total_reviews: number;
+}

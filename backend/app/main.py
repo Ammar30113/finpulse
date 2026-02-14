@@ -7,7 +7,7 @@ from app.config import settings
 from app.exceptions import register_exception_handlers
 from app.logging_config import setup_logging
 from app.middleware.rate_limit import limiter
-from app.routers import accounts, analysis, auth, credit_cards, dashboard, expenses, goals, investments, transactions
+from app.routers import accounts, analysis, auth, credit_cards, dashboard, expenses, goals, investments, transactions, weekly_review
 
 setup_logging()
 
@@ -38,6 +38,7 @@ app.include_router(goals.router, prefix=API_V1_PREFIX)
 app.include_router(transactions.router, prefix=API_V1_PREFIX)
 app.include_router(accounts.router, prefix=API_V1_PREFIX)
 app.include_router(analysis.router, prefix=API_V1_PREFIX)
+app.include_router(weekly_review.router, prefix=API_V1_PREFIX)
 
 
 @app.get("/health")
