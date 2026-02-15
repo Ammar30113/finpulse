@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date as DateType, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -12,7 +12,7 @@ class TransactionCreate(BaseModel):
     transaction_type: TransactionType
     category: str | None = None
     description: str | None = None
-    date: date
+    date: DateType
 
 
 class TransactionUpdate(BaseModel):
@@ -21,7 +21,7 @@ class TransactionUpdate(BaseModel):
     transaction_type: TransactionType | None = None
     category: str | None = None
     description: str | None = None
-    date: date | None = None
+    date: DateType | None = None
 
 
 class TransactionResponse(BaseModel):
@@ -32,7 +32,7 @@ class TransactionResponse(BaseModel):
     transaction_type: str
     category: str | None = None
     description: str | None = None
-    date: date
+    date: DateType
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
