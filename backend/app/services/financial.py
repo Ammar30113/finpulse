@@ -125,7 +125,7 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
         {
             "category": e.category,
             "amount": float(e.amount),
-            "next_due_date": e.next_due_date.isoformat() if e.next_due_date else None,
+            "due_date": e.next_due_date.isoformat() if e.next_due_date else None,
             "description": e.description,
         }
         for e in expenses
@@ -135,6 +135,7 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
     # Goals summary
     goals_summary = [
         {
+            "id": str(g.id),
             "title": g.title,
             "goal_type": g.goal_type.value if hasattr(g.goal_type, "value") else g.goal_type,
             "target_amount": float(g.target_amount),
