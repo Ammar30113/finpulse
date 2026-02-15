@@ -15,7 +15,7 @@ import { InsightsPanel } from "@/components/dashboard/InsightsPanel";
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
-  const { data, loading, error, refresh } = useDashboard();
+  const { data, insights, loading, error, refresh } = useDashboard();
   const router = useRouter();
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function DashboardPage() {
               <CreditCardsPanel utilization={data.credit_utilization_pct} />
               <UpcomingBills bills={data.upcoming_bills} />
               <GoalsProgress goals={data.goals_summary} />
-              <InsightsPanel />
+              <InsightsPanel data={insights} loading={loading} />
             </div>
           ) : null}
         </main>

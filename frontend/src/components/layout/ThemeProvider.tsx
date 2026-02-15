@@ -14,8 +14,17 @@ const THEME_STORAGE_KEY = "finpulse_theme";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+function getInitialTheme(): Theme {
+  if (typeof document !== "undefined") {
+    const attr = document.documentElement.getAttribute("data-theme");
+    if (attr === "light" || attr === "dark") return attr;
+  }
+  return "light";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
+  // Read the theme set by the inline <script> in layout.tsx to avoid flash (#14)
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);

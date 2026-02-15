@@ -98,12 +98,22 @@ async def upload_csv_transactions(
             detail="Only CSV files are accepted",
         )
 
-    content = await file.read()
-    if len(content) > 5 * 1024 * 1024:  # 5 MB limit
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="File size exceeds 5 MB limit",
-        )
+    # Read in chunks to enforce size limit before loading entire file into memory (#5)
+    max_size = 5 * 1024 * 1024  # 5 MB
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(64 * 1024)  # 64 KB chunks
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="File size exceeds 5 MB limit",
+            )
+        chunks.append(chunk)
+    content = b"".join(chunks)
 
     transactions = parse_csv_transactions(content, account_id, current_user.id)
     if not transactions:

@@ -66,6 +66,7 @@ def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID)
                 continue
 
         description = row.get("description", "").strip()
+        dedup_hash = _transaction_hash(account_id, txn_date, abs(amount), description)
 
         transactions.append({
             "account_id": account_id,
@@ -75,7 +76,7 @@ def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID)
             "category": row.get("category", "").strip() or "Uncategorized",
             "description": description,
             "date": txn_date,
-            "_hash": _transaction_hash(account_id, txn_date, abs(amount), description),
+            "dedup_hash": dedup_hash,
         })
 
     if skipped:
@@ -84,33 +85,25 @@ def parse_csv_transactions(file_content: bytes, account_id: UUID, user_id: UUID)
 
 
 def bulk_insert_transactions(db: Session, transactions: list[dict]) -> int:
-    """Insert parsed transactions into the database, skipping duplicates. Returns count inserted."""
+    """Insert parsed transactions into the database, skipping duplicates via dedup_hash column (#12)."""
     if not transactions:
         return 0
 
-    hashes = [t["_hash"] for t in transactions]
-    user_id = transactions[0]["user_id"]
-    account_id = transactions[0]["account_id"]
+    hashes = [t["dedup_hash"] for t in transactions]
 
-    # Find existing transactions to detect duplicates
-    existing = (
-        db.query(Transaction)
-        .filter(
-            Transaction.user_id == user_id,
-            Transaction.account_id == account_id,
-        )
+    # Query only the hash column instead of loading full transaction objects
+    existing_hashes = set(
+        row[0]
+        for row in db.query(Transaction.dedup_hash)
+        .filter(Transaction.dedup_hash.in_(hashes))
         .all()
+        if row[0] is not None
     )
-    existing_hashes = {
-        _transaction_hash(e.account_id, e.date, float(e.amount), e.description or "")
-        for e in existing
-    }
 
     new_txns = []
     for txn in transactions:
-        if txn["_hash"] not in existing_hashes:
-            txn_data = {k: v for k, v in txn.items() if k != "_hash"}
-            new_txns.append(Transaction(**txn_data))
+        if txn["dedup_hash"] not in existing_hashes:
+            new_txns.append(Transaction(**txn))
 
     if new_txns:
         db.add_all(new_txns)

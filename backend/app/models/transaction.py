@@ -32,6 +32,7 @@ class Transaction(Base):
     category: Mapped[str] = mapped_column(String(100), nullable=True)
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     date: Mapped[date] = mapped_column(Date, nullable=False)
+    dedup_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     account = relationship("Account", back_populates="transactions")

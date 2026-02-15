@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
@@ -36,5 +37,6 @@ def create_access_token(subject: str | None = None, *, data: dict | None = None)
     else:
         raise ValueError("Must provide subject or data with 'sub' key")
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiration_minutes)
-    payload = {"sub": sub, "exp": expire}
+    jti = str(uuid.uuid4())
+    payload = {"sub": sub, "exp": expire, "jti": jti}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

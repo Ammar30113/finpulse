@@ -3,13 +3,13 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.models.account import Account
 from app.models.analysis_result import AnalysisResult
 from app.models.credit_card import CreditCard
 from app.models.expense import Expense
 from app.models.goal import Goal
 from app.models.investment import Investment
 from app.models.user import User
+from app.services.financial import compute_financial_aggregates
 
 logger = logging.getLogger("finpulse.analysis")
 
@@ -22,19 +22,20 @@ def generate_analysis(db: Session, user: User) -> dict:
     - 2 actionable recommendations
     All rule-based, deterministic, explainable.
     """
-    # Gather data
-    accounts = db.query(Account).filter(Account.user_id == user.id).all()
+    # Use shared aggregation for consistent numbers (#10, #11)
+    agg = compute_financial_aggregates(db, user)
+
     cards = db.query(CreditCard).filter(CreditCard.user_id == user.id).all()
-    expenses = db.query(Expense).filter(Expense.user_id == user.id).all()
     investments = db.query(Investment).filter(Investment.user_id == user.id).all()
     goals = db.query(Goal).filter(Goal.user_id == user.id).all()
 
-    total_balance = sum(float(a.balance) for a in accounts)
-    total_cc_balance = sum(float(c.current_balance) for c in cards)
-    total_cc_limit = sum(float(c.credit_limit) for c in cards)
-    utilization = (total_cc_balance / total_cc_limit * 100) if total_cc_limit > 0 else 0
+    net_worth = agg["net_worth"]
+    total_assets = agg["total_assets"]
+    total_liabilities = agg["total_liabilities"]
+    utilization = agg["credit_utilization_pct"]
     total_investments = sum(float(i.current_value) for i in investments)
-    total_monthly_expenses = sum(float(e.amount) for e in expenses if e.is_recurring)
+    total_balance = agg["savings_balance"] + (agg["total_assets"] - total_investments)
+    total_monthly_expenses = agg["monthly_expenses"]
 
     insights = []
     warnings = []
@@ -42,12 +43,11 @@ def generate_analysis(db: Session, user: User) -> dict:
 
     # INSIGHTS (generate top 3)
     # 1. Net worth insight
-    net_worth = total_balance + total_investments - total_cc_balance
     insights.append({
         "priority": 1,
         "category": "net_worth",
         "message": f"Your current net worth is ${net_worth:,.2f}",
-        "detail": f"Assets: ${total_balance + total_investments:,.2f} | Liabilities: ${total_cc_balance:,.2f}",
+        "detail": f"Assets: ${total_assets:,.2f} | Liabilities: ${total_liabilities:,.2f}",
     })
 
     # 2. Savings rate insight
@@ -57,7 +57,7 @@ def generate_analysis(db: Session, user: User) -> dict:
             "priority": 2,
             "category": "savings",
             "message": f"You have {months_runway:.1f} months of expense runway",
-            "detail": f"Based on ${total_balance:,.2f} in accounts and ${total_monthly_expenses:,.2f}/mo in recurring expenses",
+            "detail": f"Based on ${total_balance:,.2f} in accounts and ${total_monthly_expenses:,.2f}/mo in expenses",
         })
     else:
         insights.append({
@@ -68,7 +68,6 @@ def generate_analysis(db: Session, user: User) -> dict:
         })
 
     # 3. Investment allocation
-    total_assets = total_balance + total_investments
     inv_pct = (total_investments / total_assets * 100) if total_assets > 0 else 0
     insights.append({
         "priority": 3,

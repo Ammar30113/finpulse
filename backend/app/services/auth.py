@@ -1,6 +1,5 @@
 import logging
-import time
-from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -13,32 +12,36 @@ logger = logging.getLogger("finpulse.auth")
 
 # Account lockout: max 5 failed attempts, 15-minute window
 MAX_FAILED_ATTEMPTS = 5
-LOCKOUT_SECONDS = 900  # 15 minutes
-
-# {email: [(timestamp, ...), ...]}
-_failed_attempts: dict[str, list[float]] = defaultdict(list)
+LOCKOUT_MINUTES = 15
 
 
-def _prune_old_attempts(email: str) -> list[float]:
-    cutoff = time.monotonic() - LOCKOUT_SECONDS
-    attempts = [t for t in _failed_attempts[email] if t > cutoff]
-    _failed_attempts[email] = attempts
-    return attempts
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User:
-    """Validate credentials and return the user. Raises 401 on failure, 429 on lockout."""
-    recent = _prune_old_attempts(email)
-    if len(recent) >= MAX_FAILED_ATTEMPTS:
-        logger.warning("Account locked out: %s (%d failed attempts)", email, len(recent))
+    """Validate credentials and return the user. Raises 401 on failure, 429 on lockout.
+
+    Lockout state is persisted in the database so it survives restarts and works
+    across multiple workers (#6).
+    """
+    user = db.query(User).filter(User.email == email).first()
+
+    # Check lockout (even if user doesn't exist, don't reveal that)
+    if user and user.locked_until and user.locked_until > _utcnow():
+        logger.warning("Account locked out: %s (until %s)", email, user.locked_until)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many failed login attempts. Please try again in 15 minutes.",
         )
 
-    user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.hashed_password):
-        _failed_attempts[email].append(time.monotonic())
+        if user:
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+                user.locked_until = _utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+                logger.warning("Account locked: %s after %d failed attempts", email, user.failed_login_attempts)
+            db.commit()
         logger.info("Failed login attempt for %s", email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -46,8 +49,12 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Successful login — clear failed attempts
-    _failed_attempts.pop(email, None)
+    # Successful login — clear lockout state
+    if user.failed_login_attempts or user.locked_until:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
+
     return user
 
 

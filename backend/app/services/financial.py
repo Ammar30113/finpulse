@@ -31,20 +31,42 @@ def _normalize_to_monthly(amount: float, frequency: str | None) -> float:
     return amount
 
 
-def build_dashboard_summary(db: Session, user: User) -> dict:
-    """Aggregate all user financial data into a single dashboard payload."""
-    # Fetch all user data
+def compute_financial_aggregates(db: Session, user: User) -> dict:
+    """Compute core financial aggregates shared by dashboard, weekly snapshot, and analysis.
+
+    Returns a dict with: net_worth, total_assets, total_liabilities, monthly_income,
+    monthly_expenses, cash_flow, credit_utilization_pct, savings_balance.
+
+    Monthly expenses uses the higher of (normalized recurring expenses) vs
+    (actual debit transactions this month) to avoid double-counting (#2).
+    """
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
     cards = db.query(CreditCard).filter(CreditCard.user_id == user.id).all()
     investments = db.query(Investment).filter(Investment.user_id == user.id).all()
     expenses = db.query(Expense).filter(Expense.user_id == user.id).all()
-    goals = db.query(Goal).filter(Goal.user_id == user.id).all()
     installments = db.query(InstallmentPlan).filter(InstallmentPlan.user_id == user.id).all()
 
+    # Assets
+    account_balance = sum(
+        float(a.balance) for a in accounts if a.account_type in ("chequing", "savings")
+    )
+    savings_balance = sum(
+        float(a.balance) for a in accounts if a.account_type == "savings"
+    )
+    investment_total = sum(float(i.current_value) for i in investments)
+    total_assets = account_balance + investment_total
+
+    # Liabilities
+    cc_balance = sum(float(c.current_balance) for c in cards)
+    installment_remaining = sum(
+        float(ip.monthly_payment) * ip.remaining_payments for ip in installments
+    )
+    total_liabilities = cc_balance + installment_remaining
+    net_worth = total_assets - total_liabilities
+
+    # Monthly income and expenses
     today = date.today()
     first_of_month = today.replace(day=1)
-
-    # Current month transactions
     month_transactions = (
         db.query(Transaction)
         .filter(
@@ -55,51 +77,47 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
         .all()
     )
 
-    # --- Compute aggregates ---
-
-    # Assets: chequing + savings balances + investment values
-    account_balance = sum(
-        float(a.balance)
-        for a in accounts
-        if a.account_type in ("chequing", "savings")
-    )
-    investment_total = sum(float(i.current_value) for i in investments)
-    total_assets = account_balance + investment_total
-
-    # Liabilities: credit card balances + remaining installment amounts
-    cc_balance = sum(float(c.current_balance) for c in cards)
-    installment_remaining = sum(
-        float(ip.monthly_payment) * ip.remaining_payments for ip in installments
-    )
-    total_liabilities = cc_balance + installment_remaining
-
-    net_worth = total_assets - total_liabilities
-
-    # Monthly income: sum of credit-type transactions this month
     monthly_income = sum(
-        float(t.amount)
-        for t in month_transactions
-        if t.transaction_type == TransactionType.CREDIT
+        float(t.amount) for t in month_transactions if t.transaction_type == TransactionType.CREDIT
     )
 
-    # Monthly expenses: recurring expenses (normalized) + debit transactions this month
+    # Use the higher of recurring estimate vs actual debit total to avoid double-counting (#2).
+    # Recurring expenses represent scheduled outflows; debit transactions represent actual outflows.
+    # When both exist, they often overlap (e.g., rent logged as both recurring and a transaction).
     recurring_monthly = sum(
-        _normalize_to_monthly(float(e.amount), e.frequency)
-        for e in expenses
-        if e.is_recurring
+        _normalize_to_monthly(float(e.amount), e.frequency) for e in expenses if e.is_recurring
     )
     debit_this_month = sum(
-        float(t.amount)
-        for t in month_transactions
-        if t.transaction_type == TransactionType.DEBIT
+        float(t.amount) for t in month_transactions if t.transaction_type == TransactionType.DEBIT
     )
-    monthly_expenses = recurring_monthly + debit_this_month
+    monthly_expenses = max(recurring_monthly, debit_this_month)
 
     cash_flow = monthly_income - monthly_expenses
 
     # Credit utilization
     total_cc_limit = sum(float(c.credit_limit) for c in cards)
     credit_utilization_pct = (cc_balance / total_cc_limit * 100) if total_cc_limit > 0 else 0
+
+    return {
+        "net_worth": round(net_worth, 2),
+        "total_assets": round(total_assets, 2),
+        "total_liabilities": round(total_liabilities, 2),
+        "monthly_income": round(monthly_income, 2),
+        "monthly_expenses": round(monthly_expenses, 2),
+        "cash_flow": round(cash_flow, 2),
+        "credit_utilization_pct": round(credit_utilization_pct, 2),
+        "savings_balance": round(savings_balance, 2),
+    }
+
+
+def build_dashboard_summary(db: Session, user: User) -> dict:
+    """Aggregate all user financial data into a single dashboard payload."""
+    # Reuse shared aggregation (#10)
+    agg = compute_financial_aggregates(db, user)
+
+    today = date.today()
+    expenses = db.query(Expense).filter(Expense.user_id == user.id).all()
+    goals = db.query(Goal).filter(Goal.user_id == user.id).all()
 
     # Upcoming bills: recurring expenses with next_due_date in the window
     thirty_days = today + timedelta(days=UPCOMING_BILLS_WINDOW_DAYS)
@@ -154,13 +172,7 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
     ]
 
     return {
-        "net_worth": round(net_worth, 2),
-        "total_assets": round(total_assets, 2),
-        "total_liabilities": round(total_liabilities, 2),
-        "monthly_income": round(monthly_income, 2),
-        "monthly_expenses": round(monthly_expenses, 2),
-        "cash_flow": round(cash_flow, 2),
-        "credit_utilization_pct": round(credit_utilization_pct, 2),
+        **agg,
         "upcoming_bills": upcoming_bills,
         "goals_summary": goals_summary,
         "recent_transactions": recent_transactions,

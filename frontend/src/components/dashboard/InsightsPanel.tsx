@@ -1,30 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { api } from "@/lib/api";
 import type { AnalysisResponse } from "@/lib/types";
 import clsx from "clsx";
 
-export function InsightsPanel() {
-  const [data, setData] = useState<AnalysisResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+interface Props {
+  data: AnalysisResponse | null;
+  loading?: boolean;
+}
 
-  const fetchInsights = useCallback(async () => {
-    try {
-      setLoading(true);
-      const insights = await api.get<AnalysisResponse>("/analysis/insights");
-      setData(insights);
-    } catch {
-      // Insights are non-critical, silently fail
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchInsights();
-  }, [fetchInsights]);
-
+export function InsightsPanel({ data, loading }: Props) {
   if (loading) {
     return (
       <div className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] p-6 shadow-[var(--fp-shadow)] backdrop-blur">
