@@ -9,7 +9,7 @@ from app.dependencies import get_current_user
 from app.models.account import Account
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.schemas.transaction import TransactionCreate, TransactionResponse
+from app.schemas.transaction import TransactionCreate, TransactionResponse, TransactionUpdate
 from app.services.ingestion import bulk_insert_transactions, parse_csv_transactions
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -71,6 +71,69 @@ def list_transactions(
         query = query.filter(Transaction.date <= date_to)
 
     return query.order_by(Transaction.date.desc(), Transaction.created_at.desc()).offset(offset).limit(limit).all()
+
+
+@router.patch("/{transaction_id}", response_model=TransactionResponse)
+def update_transaction(
+    transaction_id: UUID,
+    payload: TransactionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.user_id == current_user.id)
+        .first()
+    )
+    if not transaction:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one field is required for update",
+        )
+
+    if "account_id" in update_data:
+        account = (
+            db.query(Account)
+            .filter(
+                Account.id == update_data["account_id"],
+                Account.user_id == current_user.id,
+            )
+            .first()
+        )
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Account not found or does not belong to the current user",
+            )
+
+    for field, value in update_data.items():
+        setattr(transaction, field, value)
+
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+
+@router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_transaction(
+    transaction_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.user_id == current_user.id)
+        .first()
+    )
+    if not transaction:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    db.delete(transaction)
+    db.commit()
 
 
 @router.post("/upload-csv", status_code=status.HTTP_201_CREATED)
