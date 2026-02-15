@@ -17,6 +17,13 @@ interface CsvUploadResponse {
   account_id: string;
 }
 
+interface CountResponse {
+  total: number;
+}
+
+type SortBy = "date" | "amount" | "created_at" | "category" | "description";
+type SortOrder = "asc" | "desc";
+
 interface TransactionForm {
   account_id: string;
   amount: string;
@@ -58,6 +65,25 @@ const typeOptions = [
   { value: "credit", label: "Credit (income)" },
 ];
 
+const sortByOptions: Array<{ value: SortBy; label: string }> = [
+  { value: "date", label: "Date" },
+  { value: "amount", label: "Amount" },
+  { value: "created_at", label: "Created Time" },
+  { value: "category", label: "Category" },
+  { value: "description", label: "Description" },
+];
+
+const sortOrderOptions: Array<{ value: SortOrder; label: string }> = [
+  { value: "desc", label: "Descending" },
+  { value: "asc", label: "Ascending" },
+];
+
+const pageSizeOptions = [
+  { value: "25", label: "25 / page" },
+  { value: "50", label: "50 / page" },
+  { value: "100", label: "100 / page" },
+];
+
 const fmtMoney = (n: number) =>
   n.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
 
@@ -79,6 +105,11 @@ export default function TransactionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -110,23 +141,38 @@ export default function TransactionsPage() {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
-      params.set("limit", "200");
+      const filterParams = new URLSearchParams();
+      if (filters.account_id !== "all") filterParams.set("account_id", filters.account_id);
+      if (filters.category.trim()) filterParams.set("category", filters.category.trim());
+      if (filters.date_from) filterParams.set("date_from", filters.date_from);
+      if (filters.date_to) filterParams.set("date_to", filters.date_to);
 
-      if (filters.account_id !== "all") params.set("account_id", filters.account_id);
-      if (filters.category.trim()) params.set("category", filters.category.trim());
-      if (filters.date_from) params.set("date_from", filters.date_from);
-      if (filters.date_to) params.set("date_to", filters.date_to);
+      const listParams = new URLSearchParams(filterParams);
+      listParams.set("limit", String(pageSize));
+      listParams.set("offset", String((page - 1) * pageSize));
+      listParams.set("sort_by", sortBy);
+      listParams.set("sort_order", sortOrder);
 
-      const path = `/transactions?${params.toString()}`;
-      const data = await api.get<Transaction[]>(path);
+      const [data, countResult] = await Promise.all([
+        api.get<Transaction[]>(`/transactions?${listParams.toString()}`),
+        api.get<CountResponse>(`/transactions/count?${filterParams.toString()}`),
+      ]);
+
+      const total = countResult.total;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (page > totalPages) {
+        setPage(totalPages);
+        return;
+      }
+
+      setTotalCount(total);
       setTransactions(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load transactions");
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, page, pageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     if (!user) return;
@@ -162,6 +208,10 @@ export default function TransactionsPage() {
       net: totalCredit - totalDebit,
     };
   }, [transactions]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const startRow = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRow = Math.min(page * pageSize, totalCount);
 
   const accountOptions = useMemo(
     () => accounts.map((a) => ({ value: a.id, label: `${a.name} (${a.account_type})` })),
@@ -282,7 +332,10 @@ export default function TransactionsPage() {
     }
   };
 
-  const resetFilters = () => setFilters(DEFAULT_FILTERS);
+  const resetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setPage(1);
+  };
 
   if (authLoading || !user) return null;
 
@@ -330,31 +383,72 @@ export default function TransactionsPage() {
                 label="Account"
                 options={[{ value: "all", label: "All accounts" }, ...accountOptions]}
                 value={filters.account_id}
-                onChange={(e) => setFilters((prev) => ({ ...prev, account_id: e.target.value }))}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, account_id: e.target.value }));
+                  setPage(1);
+                }}
               />
               <Input
                 label="Category"
                 placeholder="e.g. Groceries"
                 value={filters.category}
-                onChange={(e) => setFilters((prev) => ({ ...prev, category: e.target.value }))}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, category: e.target.value }));
+                  setPage(1);
+                }}
               />
               <Input
                 label="From"
                 type="date"
                 value={filters.date_from}
-                onChange={(e) => setFilters((prev) => ({ ...prev, date_from: e.target.value }))}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, date_from: e.target.value }));
+                  setPage(1);
+                }}
               />
               <Input
                 label="To"
                 type="date"
                 value={filters.date_to}
-                onChange={(e) => setFilters((prev) => ({ ...prev, date_to: e.target.value }))}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, date_to: e.target.value }));
+                  setPage(1);
+                }}
               />
             </div>
-            <div className="mt-3">
-              <Button variant="ghost" size="sm" onClick={resetFilters}>
-                Reset Filters
-              </Button>
+            <div className="mt-3 grid gap-3 md:grid-cols-4">
+              <Select
+                label="Sort By"
+                options={sortByOptions}
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as SortBy);
+                  setPage(1);
+                }}
+              />
+              <Select
+                label="Order"
+                options={sortOrderOptions}
+                value={sortOrder}
+                onChange={(e) => {
+                  setSortOrder(e.target.value as SortOrder);
+                  setPage(1);
+                }}
+              />
+              <Select
+                label="Page Size"
+                options={pageSizeOptions}
+                value={String(pageSize)}
+                onChange={(e) => {
+                  setPageSize(Number.parseInt(e.target.value, 10));
+                  setPage(1);
+                }}
+              />
+              <div className="flex items-end">
+                <Button variant="ghost" size="sm" onClick={resetFilters}>
+                  Reset Filters
+                </Button>
+              </div>
             </div>
           </section>
 
@@ -382,62 +476,90 @@ export default function TransactionsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] shadow-[var(--fp-shadow)]">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--fp-border)] text-left text-xs font-semibold uppercase tracking-[0.2em] text-[var(--fp-text-muted)]">
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Account</th>
-                    <th className="px-4 py-3">Description</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--fp-border)]/50">
-                  {transactions.map((txn) => {
-                    const isCredit = txn.transaction_type === "credit";
-                    return (
-                      <tr key={txn.id} className="hover:bg-[var(--fp-surface-elev)]/60">
-                        <td className="px-4 py-3 text-[var(--fp-text-muted)]">{formatDate(txn.date)}</td>
-                        <td className="px-4 py-3 text-[var(--fp-text-muted)]">
-                          {accountNameById.get(txn.account_id) || "Unknown account"}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-[var(--fp-text)]">
-                          {txn.description || "—"}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--fp-text-muted)]">{txn.category || "—"}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={clsx(
-                              "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                              isCredit
-                                ? "bg-[var(--fp-positive)]/15 text-[var(--fp-positive)]"
-                                : "bg-[var(--fp-negative)]/15 text-[var(--fp-negative)]"
-                            )}
-                          >
-                            {isCredit ? "Credit" : "Debit"}
-                          </span>
-                        </td>
-                        <td className={clsx("px-4 py-3 text-right font-semibold", isCredit ? "text-[var(--fp-positive)]" : "text-[var(--fp-negative)]")}>
-                          {fmtMoney(txn.amount)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="secondary" onClick={() => handleOpenEdit(txn)}>
-                              Edit
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDelete(txn)}>
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              <div className="overflow-x-auto rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] shadow-[var(--fp-shadow)]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--fp-border)] text-left text-xs font-semibold uppercase tracking-[0.2em] text-[var(--fp-text-muted)]">
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Account</th>
+                      <th className="px-4 py-3">Description</th>
+                      <th className="px-4 py-3">Category</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3 text-right">Amount</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--fp-border)]/50">
+                    {transactions.map((txn) => {
+                      const isCredit = txn.transaction_type === "credit";
+                      return (
+                        <tr key={txn.id} className="hover:bg-[var(--fp-surface-elev)]/60">
+                          <td className="px-4 py-3 text-[var(--fp-text-muted)]">{formatDate(txn.date)}</td>
+                          <td className="px-4 py-3 text-[var(--fp-text-muted)]">
+                            {accountNameById.get(txn.account_id) || "Unknown account"}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-[var(--fp-text)]">
+                            {txn.description || "—"}
+                          </td>
+                          <td className="px-4 py-3 text-[var(--fp-text-muted)]">{txn.category || "—"}</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={clsx(
+                                "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                                isCredit
+                                  ? "bg-[var(--fp-positive)]/15 text-[var(--fp-positive)]"
+                                  : "bg-[var(--fp-negative)]/15 text-[var(--fp-negative)]"
+                              )}
+                            >
+                              {isCredit ? "Credit" : "Debit"}
+                            </span>
+                          </td>
+                          <td className={clsx("px-4 py-3 text-right font-semibold", isCredit ? "text-[var(--fp-positive)]" : "text-[var(--fp-negative)]")}>
+                            {fmtMoney(txn.amount)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="secondary" onClick={() => handleOpenEdit(txn)}>
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleDelete(txn)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface)] px-4 py-3">
+                <p className="text-sm text-[var(--fp-text-muted)]">
+                  Showing {startRow}-{endRow} of {totalCount}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                    disabled={page <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-[var(--fp-text-muted)]">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={page >= totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </main>
@@ -550,4 +672,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-

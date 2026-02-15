@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -13,6 +14,28 @@ from app.schemas.transaction import TransactionCreate, TransactionResponse, Tran
 from app.services.ingestion import bulk_insert_transactions, parse_csv_transactions
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
+
+
+def _base_transactions_query(
+    db: Session,
+    current_user: User,
+    account_id: UUID | None,
+    category: str | None,
+    date_from: date | None,
+    date_to: date | None,
+):
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+
+    if account_id:
+        query = query.filter(Transaction.account_id == account_id)
+    if category:
+        query = query.filter(Transaction.category == category)
+    if date_from:
+        query = query.filter(Transaction.date >= date_from)
+    if date_to:
+        query = query.filter(Transaction.date <= date_to)
+
+    return query
 
 
 @router.post("/", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
@@ -54,23 +77,60 @@ def list_transactions(
     category: str | None = Query(None, description="Filter by category"),
     date_from: date | None = Query(None, description="Start date (inclusive)"),
     date_to: date | None = Query(None, description="End date (inclusive)"),
+    sort_by: Literal["date", "amount", "created_at", "category", "description"] = Query(
+        "date",
+        description="Sort field",
+    ),
+    sort_order: Literal["asc", "desc"] = Query("desc", description="Sort direction"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    query = _base_transactions_query(
+        db=db,
+        current_user=current_user,
+        account_id=account_id,
+        category=category,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
-    if account_id:
-        query = query.filter(Transaction.account_id == account_id)
-    if category:
-        query = query.filter(Transaction.category == category)
-    if date_from:
-        query = query.filter(Transaction.date >= date_from)
-    if date_to:
-        query = query.filter(Transaction.date <= date_to)
+    sort_map = {
+        "date": Transaction.date,
+        "amount": Transaction.amount,
+        "created_at": Transaction.created_at,
+        "category": Transaction.category,
+        "description": Transaction.description,
+    }
+    primary_sort_col = sort_map[sort_by]
 
-    return query.order_by(Transaction.date.desc(), Transaction.created_at.desc()).offset(offset).limit(limit).all()
+    if sort_order == "asc":
+        query = query.order_by(primary_sort_col.asc(), Transaction.created_at.asc())
+    else:
+        query = query.order_by(primary_sort_col.desc(), Transaction.created_at.desc())
+
+    return query.offset(offset).limit(limit).all()
+
+
+@router.get("/count")
+def count_transactions(
+    account_id: UUID | None = Query(None, description="Filter by account"),
+    category: str | None = Query(None, description="Filter by category"),
+    date_from: date | None = Query(None, description="Start date (inclusive)"),
+    date_to: date | None = Query(None, description="End date (inclusive)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    total = _base_transactions_query(
+        db=db,
+        current_user=current_user,
+        account_id=account_id,
+        category=category,
+        date_from=date_from,
+        date_to=date_to,
+    ).count()
+    return {"total": total}
 
 
 @router.patch("/{transaction_id}", response_model=TransactionResponse)
