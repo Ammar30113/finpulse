@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { useTheme } from "@/components/layout/ThemeProvider";
@@ -20,7 +20,6 @@ const PASSWORD_PATTERN =
   "(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{}|;:'\\\",.<>/?`~]).{8,}";
 
 export default function LoginPage() {
-  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,11 +38,12 @@ export default function LoginPage() {
   const isLogin = mode === "login";
 
   useEffect(() => {
-    if (searchParams.get("mode") !== "reset") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") !== "reset") return;
     setMode("reset");
-    const token = searchParams.get("token");
+    const token = params.get("token");
     if (token) setResetToken(token);
-  }, [searchParams]);
+  }, []);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
