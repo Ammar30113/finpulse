@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_use_tls: bool = True
     smtp_from_email: str | None = None
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    supabase_service_role_key: str | None = None
 
     model_config = {"env_file": ".env"}
 
@@ -40,6 +43,10 @@ class Settings(BaseSettings):
     def cors_origin_regex(self) -> str | None:
         regex = (self.allowed_origin_regex or "").strip()
         return regex or None
+
+    @property
+    def supabase_enabled(self) -> bool:
+        return bool((self.supabase_url or "").strip() and (self.supabase_anon_key or "").strip())
 
 
 settings = Settings()

@@ -53,7 +53,10 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     request_password_reset(db, payload.email)
     return ForgotPasswordResponse(
-        message="If an account with that email exists, password reset instructions have been sent."
+        message=(
+            "If an account with that email exists and email delivery is configured, "
+            "password reset instructions have been sent."
+        )
     )
 
 

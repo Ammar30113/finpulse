@@ -39,10 +39,25 @@ export default function LoginPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("mode") !== "reset") return;
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const queryMode = params.get("mode");
+    const queryType = params.get("type");
+    const hashType = hashParams.get("type");
+
+    const resetLikeMode =
+      queryMode === "reset" || queryType === "recovery" || hashType === "recovery";
+
+    if (!resetLikeMode) return;
+
     setMode("reset");
-    const token = params.get("token");
-    if (token) setResetToken(token);
+    const token =
+      hashParams.get("access_token") ||
+      params.get("access_token") ||
+      params.get("token") ||
+      "";
+    if (token) {
+      setResetToken(token);
+    }
   }, []);
 
   const switchMode = (nextMode: AuthMode) => {
@@ -195,7 +210,7 @@ export default function LoginPage() {
               <p className="mt-2 text-sm text-[var(--fp-text-muted)]">
                 {isRegister && "Start your journey to financial clarity"}
                 {isLogin && "Sign in to continue your weekly review"}
-                {isForgot && "Enter your email to receive a secure reset link"}
+                {isForgot && "Enter your email to receive a secure reset link (when email is configured)"}
                 {isReset && "Create a strong password to finish reset"}
               </p>
 
