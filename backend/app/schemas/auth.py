@@ -44,3 +44,29 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong_password(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > _PASSWORD_MAX_BYTES:
+            raise ValueError(_PASSWORD_MAX_BYTES_MSG)
+        if not _PASSWORD_PATTERN.match(v):
+            raise ValueError(_PASSWORD_MSG)
+        return v
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str

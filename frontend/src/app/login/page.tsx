@@ -1,31 +1,75 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
+
+type AuthMode = "login" | "register" | "forgot" | "reset";
+
+interface MessageResponse {
+  message: string;
+}
 
 export default function LoginPage() {
-  const [isRegister, setIsRegister] = useState(false);
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [resetToken, setResetToken] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { login, register } = useAuth();
   const router = useRouter();
 
+  const isRegister = mode === "register";
+  const isForgot = mode === "forgot";
+  const isReset = mode === "reset";
+  const isLogin = mode === "login";
+
+  useEffect(() => {
+    if (searchParams.get("mode") !== "reset") return;
+    setMode("reset");
+    const token = searchParams.get("token");
+    if (token) {
+      setResetToken(token);
+    }
+  }, [searchParams]);
+
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    setError("");
+    setInfo("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfo("");
     setSubmitting(true);
 
     try {
       if (isRegister) {
         await register(email, password, fullName);
-      } else {
+        router.replace("/dashboard");
+      } else if (isLogin) {
         await login(email, password);
+        router.replace("/dashboard");
+      } else if (isForgot) {
+        const res = await api.post<MessageResponse>("/auth/forgot-password", { email });
+        setInfo(res.message);
+      } else if (isReset) {
+        const res = await api.post<MessageResponse>("/auth/reset-password", {
+          token: resetToken,
+          new_password: password,
+        });
+        setInfo(res.message);
+        setMode("login");
+        setPassword("");
+        setResetToken("");
       }
-      router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -80,17 +124,27 @@ export default function LoginPage() {
           </div>
 
           <h2 className="text-2xl font-bold text-gray-900">
-            {isRegister ? "Create your account" : "Welcome back"}
+            {isRegister && "Create your account"}
+            {isLogin && "Welcome back"}
+            {isForgot && "Reset your password"}
+            {isReset && "Set a new password"}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {isRegister
-              ? "Start your journey to financial clarity"
-              : "Sign in to your FinPulse account"}
+            {isRegister && "Start your journey to financial clarity"}
+            {isLogin && "Sign in to your FinPulse account"}
+            {isForgot && "We'll send you a secure reset link"}
+            {isReset && "Choose a strong password to finish reset"}
           </p>
 
           {error && (
             <div className="mt-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {info && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+              {info}
             </div>
           )}
 
@@ -112,44 +166,73 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
-                placeholder="you@example.com"
-              />
-            </div>
+            {(isLogin || isRegister || isForgot) && (
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
+                  placeholder="you@example.com"
+                />
+              </div>
+            )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
-                placeholder="••••••••"
-                minLength={8}
-                maxLength={72}
-                pattern={"(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{}|;:'\\\",.<>/?`~]).{8,}"}
-                title="Use at least 8 characters with uppercase, lowercase, number, and special character."
-              />
-              {isRegister && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Must be 8-72 chars and include uppercase, lowercase, number, and special character.
-                </p>
-              )}
-            </div>
+            {isReset && (
+              <div>
+                <label htmlFor="resetToken" className="block text-sm font-medium text-gray-700">
+                  Reset token
+                </label>
+                <input
+                  id="resetToken"
+                  type="text"
+                  required
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
+                  placeholder="Paste your reset token"
+                />
+              </div>
+            )}
+
+            {(isLogin || isRegister || isReset) && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  {isReset ? "New password" : "Password"}
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
+                  placeholder="••••••••"
+                  minLength={8}
+                  maxLength={72}
+                  pattern={
+                    isRegister || isReset
+                      ? "(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{}|;:'\\\",.<>/?`~]).{8,}"
+                      : undefined
+                  }
+                  title={
+                    isRegister || isReset
+                      ? "Use at least 8 characters with uppercase, lowercase, number, and special character."
+                      : undefined
+                  }
+                />
+                {(isRegister || isReset) && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Must be 8-72 chars and include uppercase, lowercase, number, and special character.
+                  </p>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"
@@ -159,29 +242,68 @@ export default function LoginPage() {
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  {isRegister ? "Creating account..." : "Signing in..."}
+                  {isRegister && "Creating account..."}
+                  {isLogin && "Signing in..."}
+                  {isForgot && "Sending reset link..."}
+                  {isReset && "Updating password..."}
                 </span>
-              ) : isRegister ? (
-                "Create account"
               ) : (
-                "Sign in"
+                <>
+                  {isRegister && "Create account"}
+                  {isLogin && "Sign in"}
+                  {isForgot && "Send reset link"}
+                  {isReset && "Update password"}
+                </>
               )}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegister(!isRegister);
-                setError("");
-              }}
-              className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
-            >
-              {isRegister ? "Sign in" : "Create one"}
-            </button>
-          </p>
+          {isLogin && (
+            <div className="mt-6 space-y-2 text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={() => switchMode("forgot")}
+                className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
+              >
+                Forgot password?
+              </button>
+              <p>
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("register")}
+                  className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
+                >
+                  Create one
+                </button>
+              </p>
+            </div>
+          )}
+
+          {isRegister && (
+            <p className="mt-6 text-center text-sm text-gray-600">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
+              >
+                Sign in
+              </button>
+            </p>
+          )}
+
+          {(isForgot || isReset) && (
+            <p className="mt-6 text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
+              >
+                Back to sign in
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>

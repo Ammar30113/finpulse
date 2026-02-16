@@ -3,11 +3,19 @@ import time
 from collections import defaultdict
 
 from fastapi import HTTPException, status
+from jose import JWTError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models.account import Account
 from app.models.user import User
-from app.utils.security import hash_password, verify_password
+from app.utils.security import (
+    create_password_reset_token,
+    decode_password_reset_token,
+    fingerprint_password_hash,
+    hash_password,
+    verify_password,
+)
 
 logger = logging.getLogger("finpulse.auth")
 
@@ -89,3 +97,62 @@ def register_user(db: Session, email: str, password: str, full_name: str) -> Use
 
     logger.info("New user registered: %s", user.id)
     return user
+
+
+def _build_password_reset_url(token: str) -> str | None:
+    base = (settings.frontend_base_url or "").rstrip("/")
+    if not base:
+        return None
+    return f"{base}/login?mode=reset&token={token}"
+
+
+def request_password_reset(db: Session, email: str) -> None:
+    """Generate a reset token and deliver/log reset instructions if the user exists."""
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return
+
+    token = create_password_reset_token(user.email, user.hashed_password)
+    reset_url = _build_password_reset_url(token)
+    if reset_url:
+        logger.info("Password reset link generated for %s: %s", user.email, reset_url)
+    else:
+        logger.info("Password reset token generated for %s: %s", user.email, token)
+
+
+def reset_password(db: Session, token: str, new_password: str) -> None:
+    """Validate reset token and update the user's password."""
+    try:
+        email, token_fingerprint = decode_password_reset_token(token)
+    except (JWTError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token",
+        )
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token",
+        )
+
+    current_fingerprint = fingerprint_password_hash(user.hashed_password)
+    if current_fingerprint != token_fingerprint:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is no longer valid",
+        )
+
+    try:
+        user.hashed_password = hash_password(new_password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    db.add(user)
+    db.commit()
+    _failed_attempts.pop(user.email, None)
+    logger.info("Password reset completed for user: %s", user.id)

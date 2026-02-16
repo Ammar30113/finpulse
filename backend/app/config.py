@@ -6,7 +6,9 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 60
+    password_reset_expiration_minutes: int = 30
     encryption_key: str
+    frontend_base_url: str | None = "http://localhost:3000"
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     allowed_origin_regex: str | None = r"https://.*\.vercel\.app"
     cors_allow_credentials: bool = False
