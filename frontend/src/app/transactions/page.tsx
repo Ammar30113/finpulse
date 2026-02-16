@@ -120,6 +120,7 @@ export default function TransactionsPage() {
   const [importing, setImporting] = useState(false);
   const [importAccountId, setImportAccountId] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -332,6 +333,43 @@ export default function TransactionsPage() {
     }
   };
 
+  const handleExportCsv = async () => {
+    setError(null);
+    setSuccess(null);
+
+    try {
+      setExporting(true);
+
+      const params = new URLSearchParams();
+      if (filters.account_id !== "all") params.set("account_id", filters.account_id);
+      if (filters.category.trim()) params.set("category", filters.category.trim());
+      if (filters.date_from) params.set("date_from", filters.date_from);
+      if (filters.date_to) params.set("date_to", filters.date_to);
+      params.set("sort_by", sortBy);
+      params.set("sort_order", sortOrder);
+
+      const query = params.toString();
+      const { blob, filename } = await api.download(
+        `/transactions/export-csv${query ? `?${query}` : ""}`
+      );
+
+      const objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename || `transactions-${todayIso()}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(objectUrl);
+
+      setSuccess("CSV export downloaded.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to export CSV");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const resetFilters = () => {
     setFilters(DEFAULT_FILTERS);
     setPage(1);
@@ -369,6 +407,13 @@ export default function TransactionsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="secondary" onClick={() => setShowImport(true)} disabled={accounts.length === 0}>
                   Import CSV
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleExportCsv}
+                  disabled={loading || totalCount === 0 || exporting}
+                >
+                  {exporting ? "Exporting..." : "Export CSV"}
                 </Button>
                 <Button onClick={handleOpenCreate} disabled={accounts.length === 0}>
                   Add Transaction

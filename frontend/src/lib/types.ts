@@ -147,6 +147,19 @@ export interface AnalysisResponse {
   summary: string;
 }
 
+export interface NotificationPreferences {
+  email_notifications_enabled: boolean;
+  weekly_summary_enabled: boolean;
+  weekly_summary_day: number;
+  weekly_summary_hour: number;
+  notification_timezone: string;
+}
+
+export interface NotificationTestResponse {
+  status: string;
+  detail: string;
+}
+
 export interface MetricChange {
   absolute: number;
   pct: number | null;

@@ -59,6 +59,25 @@ export function InsightsPanel() {
         AI Insights
       </h3>
 
+      {data.insights.length > 0 && (
+        <ol className="mt-3 space-y-2">
+          {data.insights.slice(0, 3).map((insight) => (
+            <li key={`${insight.priority}-${insight.category}`} className="rounded-xl border border-[var(--fp-border)] bg-[var(--fp-surface-elev)]/55 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--fp-text-soft)]">
+                  {insight.category.replace(/_/g, " ")}
+                </p>
+                <span className="rounded-full border border-[var(--fp-border)] px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-[var(--fp-text-muted)]">
+                  P{insight.priority}
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-semibold text-[var(--fp-text)]">{insight.message}</p>
+              <p className="mt-1 text-xs text-[var(--fp-text-muted)]">{insight.detail}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+
       {data.warnings.length > 0 && (
         <div className="mt-3 space-y-2">
           {data.warnings.slice(0, 2).map((w, i) => (

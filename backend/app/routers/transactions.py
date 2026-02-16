@@ -1,8 +1,10 @@
+import csv
+import io
 from datetime import date
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -36,6 +38,25 @@ def _base_transactions_query(
         query = query.filter(Transaction.date <= date_to)
 
     return query
+
+
+def _apply_transaction_sort(
+    query,
+    sort_by: Literal["date", "amount", "created_at", "category", "description"],
+    sort_order: Literal["asc", "desc"],
+):
+    sort_map = {
+        "date": Transaction.date,
+        "amount": Transaction.amount,
+        "created_at": Transaction.created_at,
+        "category": Transaction.category,
+        "description": Transaction.description,
+    }
+    primary_sort_col = sort_map[sort_by]
+
+    if sort_order == "asc":
+        return query.order_by(primary_sort_col.asc(), Transaction.created_at.asc())
+    return query.order_by(primary_sort_col.desc(), Transaction.created_at.desc())
 
 
 @router.post("/", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
@@ -95,20 +116,7 @@ def list_transactions(
         date_from=date_from,
         date_to=date_to,
     )
-
-    sort_map = {
-        "date": Transaction.date,
-        "amount": Transaction.amount,
-        "created_at": Transaction.created_at,
-        "category": Transaction.category,
-        "description": Transaction.description,
-    }
-    primary_sort_col = sort_map[sort_by]
-
-    if sort_order == "asc":
-        query = query.order_by(primary_sort_col.asc(), Transaction.created_at.asc())
-    else:
-        query = query.order_by(primary_sort_col.desc(), Transaction.created_at.desc())
+    query = _apply_transaction_sort(query, sort_by, sort_order)
 
     return query.offset(offset).limit(limit).all()
 
@@ -131,6 +139,69 @@ def count_transactions(
         date_to=date_to,
     ).count()
     return {"total": total}
+
+
+@router.get("/export-csv")
+def export_transactions_csv(
+    account_id: UUID | None = Query(None, description="Filter by account"),
+    category: str | None = Query(None, description="Filter by category"),
+    date_from: date | None = Query(None, description="Start date (inclusive)"),
+    date_to: date | None = Query(None, description="End date (inclusive)"),
+    sort_by: Literal["date", "amount", "created_at", "category", "description"] = Query(
+        "date",
+        description="Sort field",
+    ),
+    sort_order: Literal["asc", "desc"] = Query("desc", description="Sort direction"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = _base_transactions_query(
+        db=db,
+        current_user=current_user,
+        account_id=account_id,
+        category=category,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    query = _apply_transaction_sort(query, sort_by, sort_order)
+    transactions = query.all()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "date",
+            "account_id",
+            "transaction_type",
+            "amount",
+            "category",
+            "description",
+            "created_at",
+        ]
+    )
+
+    for transaction in transactions:
+        writer.writerow(
+            [
+                transaction.date.isoformat(),
+                str(transaction.account_id),
+                transaction.transaction_type.value,
+                f"{float(transaction.amount):.2f}",
+                transaction.category or "",
+                transaction.description or "",
+                transaction.created_at.isoformat() if transaction.created_at else "",
+            ]
+        )
+
+    filename = f"transactions-{date.today().isoformat()}.csv"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.patch("/{transaction_id}", response_model=TransactionResponse)

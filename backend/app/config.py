@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     allowed_origin_regex: str | None = r"https://.*\.vercel\.app"
     cors_allow_credentials: bool = False
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    smtp_from_email: str | None = None
 
     model_config = {"env_file": ".env"}
 

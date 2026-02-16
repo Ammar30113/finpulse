@@ -229,9 +229,64 @@ def test_analysis_uses_monthly_normalized_expense_runway():
 
     result = generate_analysis(db, user)
 
-    assert "10.0 months" in result["insights"][1]["message"]
-    assert "$520.00/mo" in result["insights"][1]["detail"]
+    savings_insight = next(i for i in result["insights"] if i["category"] == "savings")
+    assert "10.0 months" in savings_insight["message"]
+    assert "$520.00/mo" in savings_insight["detail"]
     assert db.commits == 1
+
+
+def test_analysis_includes_week_over_week_spending_comparison():
+    user = _make_user()
+    today = date.today()
+    this_week_start = today - timedelta(days=today.weekday())
+    prev_week_start = this_week_start - timedelta(days=7)
+
+    txns = [
+        _txn(500, TransactionType.DEBIT, "Food", description="Groceries", d=this_week_start),
+        _txn(300, TransactionType.DEBIT, "Food", description="Dining", d=prev_week_start),
+    ]
+    db = FakeSession(
+        {
+            Account: [SimpleNamespace(balance=3000)],
+            CreditCard: [],
+            Expense: [],
+            Investment: [],
+            Goal: [],
+            Transaction: txns,
+            AnalysisResult: [],
+        }
+    )
+
+    result = generate_analysis(db, user)
+
+    trend_insight = next(i for i in result["insights"] if i["category"] == "spending_trend")
+    assert "vs last week" in trend_insight["message"]
+    assert "$500.00 this week vs $300.00 last week" in trend_insight["detail"]
+
+
+def test_analysis_net_worth_compares_with_previous_snapshot():
+    user = _make_user()
+    previous_snapshot = SimpleNamespace(
+        raw_data={"net_worth": 1000},
+        snapshot_date=date.today() - timedelta(days=7),
+    )
+    db = FakeSession(
+        {
+            Account: [SimpleNamespace(balance=2000)],
+            CreditCard: [],
+            Expense: [],
+            Investment: [],
+            Goal: [],
+            Transaction: [],
+            AnalysisResult: [previous_snapshot],
+        }
+    )
+
+    result = generate_analysis(db, user)
+
+    net_worth_insight = next(i for i in result["insights"] if i["category"] == "net_worth")
+    assert "since last snapshot" in net_worth_insight["message"]
+    assert "$1,000.00" in net_worth_insight["message"]
 
 
 def test_dashboard_summary_includes_weekly_and_category_trends():
