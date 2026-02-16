@@ -12,7 +12,7 @@ from app.models.investment import Investment
 from app.models.transaction import Transaction, TransactionType
 from app.models.user import User
 from app.models.weekly_review import ActionStatus, WeeklyReview
-from app.services.financial import _normalize_to_monthly
+from app.services.financial import _compute_monthly_expenses
 
 
 def _iso_week_bounds(d: date) -> tuple[date, date]:
@@ -164,11 +164,7 @@ def _build_weekly_snapshot(db: Session, user: User, week_start: date, week_end: 
         .all()
     )
     monthly_income = sum(float(t.amount) for t in month_txns if t.transaction_type == TransactionType.CREDIT)
-    recurring_monthly = sum(
-        _normalize_to_monthly(float(e.amount), e.frequency) for e in expenses if e.is_recurring
-    )
-    debit_this_month = sum(float(t.amount) for t in month_txns if t.transaction_type == TransactionType.DEBIT)
-    monthly_expenses = recurring_monthly + debit_this_month
+    monthly_expenses = _compute_monthly_expenses(expenses, month_txns)
     cash_flow = monthly_income - monthly_expenses
 
     total_cc_limit = sum(float(c.credit_limit) for c in cards)
@@ -255,7 +251,7 @@ def _generate_action(db: Session, user: User, snapshot: dict, week_start: date) 
                 "target_amount": pay_amount,
                 "target_name": worst.name,
             }))
-        if util > 50:
+        elif util > 50:
             candidates.append((85, {
                 "type": "pay_credit_card",
                 "title": f"Pay down ${pay_amount:,.0f} on {worst.name}",
@@ -263,7 +259,7 @@ def _generate_action(db: Session, user: User, snapshot: dict, week_start: date) 
                 "target_amount": pay_amount,
                 "target_name": worst.name,
             }))
-        if util > 30:
+        elif util > 30:
             candidates.append((75, {
                 "type": "pay_credit_card",
                 "title": f"Pay down ${pay_amount:,.0f} on {worst.name}",
@@ -331,7 +327,7 @@ def _generate_action(db: Session, user: User, snapshot: dict, week_start: date) 
                 "target_amount": target_transfer,
                 "target_name": "Savings",
             }))
-        if months_covered < 2:
+        elif months_covered < 2:
             candidates.append((60, {
                 "type": "build_emergency_fund",
                 "title": f"Transfer ${target_transfer:,.0f} to savings",
@@ -339,7 +335,7 @@ def _generate_action(db: Session, user: User, snapshot: dict, week_start: date) 
                 "target_amount": target_transfer,
                 "target_name": "Savings",
             }))
-        if months_covered < 3:
+        elif months_covered < 3:
             candidates.append((40, {
                 "type": "build_emergency_fund",
                 "title": f"Transfer ${target_transfer:,.0f} to savings",
@@ -386,7 +382,7 @@ def _generate_action(db: Session, user: User, snapshot: dict, week_start: date) 
                 "target_amount": round(spending_diff * 0.5, 2),
                 "target_name": top_category,
             }))
-        if spending_diff > 100:
+        elif spending_diff > 100:
             candidates.append((55, {
                 "type": "reduce_spending",
                 "title": f"Reduce {top_category} by ${spending_diff * 0.3:,.0f}",
@@ -396,11 +392,12 @@ def _generate_action(db: Session, user: User, snapshot: dict, week_start: date) 
             }))
 
     # --- Fallback ---
-    candidates.append((10, {
+    fallback_action = {
         "type": "review_transactions",
         "title": "Review this week's transactions",
         "detail": "Take 5 minutes to review your spending and make sure everything looks right.",
-    }))
+    }
+    candidates.append((10, fallback_action))
 
     # Sort by score descending
     candidates.sort(key=lambda x: x[0], reverse=True)
@@ -415,12 +412,12 @@ def _generate_action(db: Session, user: User, snapshot: dict, week_start: date) 
     )
     recent_types = [r.action_type for r in recent_reviews]
 
-    winner_score, winner = candidates[0]
+    _, winner = candidates[0]
     if len(recent_types) == 2 and all(t == winner["type"] for t in recent_types):
         for score, candidate in candidates[1:]:
-            if score >= 30:
+            if candidate["type"] != winner["type"] and score >= 30:
                 return candidate
-                break
+        return fallback_action
 
     return winner
 

@@ -10,6 +10,7 @@ from app.models.expense import Expense
 from app.models.goal import Goal
 from app.models.investment import Investment
 from app.models.user import User
+from app.services.financial import _normalize_to_monthly
 
 logger = logging.getLogger("finpulse.analysis")
 
@@ -34,7 +35,11 @@ def generate_analysis(db: Session, user: User) -> dict:
     total_cc_limit = sum(float(c.credit_limit) for c in cards)
     utilization = (total_cc_balance / total_cc_limit * 100) if total_cc_limit > 0 else 0
     total_investments = sum(float(i.current_value) for i in investments)
-    total_monthly_expenses = sum(float(e.amount) for e in expenses if e.is_recurring)
+    total_monthly_expenses = sum(
+        _normalize_to_monthly(float(e.amount), e.frequency)
+        for e in expenses
+        if e.is_recurring
+    )
 
     insights = []
     warnings = []

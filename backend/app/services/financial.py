@@ -31,6 +31,52 @@ def _normalize_to_monthly(amount: float, frequency: str | None) -> float:
     return amount
 
 
+def _matches_recurring_expense(expense: Expense, txn: Transaction) -> bool:
+    """
+    Return True when a debit transaction likely represents a recurring expense entry.
+
+    Matching requires category alignment. If the recurring expense has a description,
+    description must also match exactly.
+    """
+    if txn.transaction_type != TransactionType.DEBIT:
+        return False
+
+    expense_category = (expense.category or "").strip().lower()
+    txn_category = (txn.category or "").strip().lower()
+    if not expense_category or expense_category != txn_category:
+        return False
+
+    expense_description = (expense.description or "").strip().lower()
+    if not expense_description:
+        return True
+
+    txn_description = (txn.description or "").strip().lower()
+    return bool(txn_description) and txn_description == expense_description
+
+
+def _compute_monthly_expenses(expenses: list[Expense], month_transactions: list[Transaction]) -> float:
+    """
+    Compute monthly expenses without double-counting recurring bills already logged
+    as debit transactions in the same month.
+    """
+    debit_transactions = [
+        t for t in month_transactions if t.transaction_type == TransactionType.DEBIT
+    ]
+    debit_total = sum(float(t.amount) for t in debit_transactions)
+
+    uncovered_recurring_monthly = 0.0
+    for expense in expenses:
+        if not expense.is_recurring:
+            continue
+        if any(_matches_recurring_expense(expense, txn) for txn in debit_transactions):
+            continue
+        uncovered_recurring_monthly += _normalize_to_monthly(
+            float(expense.amount), expense.frequency
+        )
+
+    return debit_total + uncovered_recurring_monthly
+
+
 def build_dashboard_summary(db: Session, user: User) -> dict:
     """Aggregate all user financial data into a single dashboard payload."""
     # Fetch all user data
@@ -82,18 +128,9 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
         if t.transaction_type == TransactionType.CREDIT
     )
 
-    # Monthly expenses: recurring expenses (normalized) + debit transactions this month
-    recurring_monthly = sum(
-        _normalize_to_monthly(float(e.amount), e.frequency)
-        for e in expenses
-        if e.is_recurring
-    )
-    debit_this_month = sum(
-        float(t.amount)
-        for t in month_transactions
-        if t.transaction_type == TransactionType.DEBIT
-    )
-    monthly_expenses = recurring_monthly + debit_this_month
+    # Monthly expenses: avoid double-counting recurring expenses already represented
+    # by debit transactions in this month.
+    monthly_expenses = _compute_monthly_expenses(expenses, month_transactions)
 
     cash_flow = monthly_income - monthly_expenses
 
