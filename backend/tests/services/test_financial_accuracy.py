@@ -232,3 +232,39 @@ def test_analysis_uses_monthly_normalized_expense_runway():
     assert "10.0 months" in result["insights"][1]["message"]
     assert "$520.00/mo" in result["insights"][1]["detail"]
     assert db.commits == 1
+
+
+def test_dashboard_summary_includes_weekly_and_category_trends():
+    user = _make_user()
+    today = date.today()
+    this_week_start = today - timedelta(days=today.weekday())
+    prev_week_start = this_week_start - timedelta(days=7)
+
+    month_txns = [
+        _txn(2500, TransactionType.CREDIT, "Income", description="Salary", d=this_week_start),
+        _txn(420, TransactionType.DEBIT, "Food", description="Groceries", d=this_week_start),
+        _txn(180, TransactionType.DEBIT, "Transport", description="Transit", d=this_week_start),
+        _txn(300, TransactionType.DEBIT, "Food", description="Dining", d=prev_week_start),
+        _txn(150, TransactionType.DEBIT, "Entertainment", description="Movies", d=prev_week_start),
+    ]
+    db = FakeSession(
+        {
+            Account: [SimpleNamespace(balance=4000, account_type="chequing")],
+            CreditCard: [],
+            Investment: [],
+            Expense: [],
+            Goal: [],
+            InstallmentPlan: [],
+            Transaction: month_txns,
+        }
+    )
+
+    summary = build_dashboard_summary(db, user)
+
+    assert len(summary["spending_trend"]) == 8
+    latest_week = summary["spending_trend"][-1]
+    assert latest_week["week_start"] == this_week_start.isoformat()
+    assert latest_week["spending"] == 600
+
+    assert summary["category_spending"][0]["category"] == "Food"
+    assert summary["category_spending"][0]["amount"] == 720

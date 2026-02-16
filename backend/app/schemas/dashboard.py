@@ -12,3 +12,5 @@ class DashboardSummary(BaseModel):
     upcoming_bills: list[dict]
     goals_summary: list[dict]
     recent_transactions: list[dict]
+    spending_trend: list[dict]
+    category_spending: list[dict]

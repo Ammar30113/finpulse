@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { NetWorthCard } from "@/components/dashboard/NetWorthCard";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
+import { SpendingTrendsPanel } from "@/components/dashboard/SpendingTrendsPanel";
 import { CreditCardsPanel } from "@/components/dashboard/CreditCardsPanel";
 import { UpcomingBills } from "@/components/dashboard/UpcomingBills";
 import { GoalsProgress } from "@/components/dashboard/GoalsProgress";
@@ -65,6 +66,10 @@ export default function DashboardPage() {
                 income={data.monthly_income}
                 expenses={data.monthly_expenses}
                 cashFlow={data.cash_flow}
+              />
+              <SpendingTrendsPanel
+                weeklyTrend={data.spending_trend}
+                categorySpending={data.category_spending}
               />
               <CreditCardsPanel utilization={data.credit_utilization_pct} />
               <UpcomingBills bills={data.upcoming_bills} />

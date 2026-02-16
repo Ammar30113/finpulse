@@ -13,6 +13,8 @@ from app.models.user import User
 
 UPCOMING_BILLS_WINDOW_DAYS = 30
 RECENT_TRANSACTIONS_LIMIT = 10
+DASHBOARD_TREND_WEEKS = 8
+CATEGORY_TREND_LIMIT = 6
 
 
 def _normalize_to_monthly(amount: float, frequency: str | None) -> float:
@@ -77,6 +79,70 @@ def _compute_monthly_expenses(expenses: list[Expense], month_transactions: list[
     return debit_total + uncovered_recurring_monthly
 
 
+def _week_start(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def _build_spending_trend(transactions: list[Transaction], today: date) -> list[dict]:
+    current_week_start = _week_start(today)
+    trend_start = current_week_start - timedelta(days=7 * (DASHBOARD_TREND_WEEKS - 1))
+
+    totals_by_week: dict[date, float] = {}
+    for txn in transactions:
+        if txn.transaction_type != TransactionType.DEBIT:
+            continue
+        ws = _week_start(txn.date)
+        totals_by_week[ws] = totals_by_week.get(ws, 0.0) + float(txn.amount)
+
+    points: list[dict] = []
+    prev_amount = None
+    for idx in range(DASHBOARD_TREND_WEEKS):
+        ws = trend_start + timedelta(days=idx * 7)
+        we = ws + timedelta(days=6)
+        amount = round(totals_by_week.get(ws, 0.0), 2)
+        change_pct = None
+        if prev_amount is not None and prev_amount > 0:
+            change_pct = round((amount - prev_amount) / prev_amount * 100, 1)
+        points.append(
+            {
+                "week_start": ws.isoformat(),
+                "week_end": we.isoformat(),
+                "label": ws.strftime("%b %d"),
+                "spending": amount,
+                "wow_change_pct": change_pct,
+            }
+        )
+        prev_amount = amount
+
+    return points
+
+
+def _build_category_spending(transactions: list[Transaction]) -> list[dict]:
+    category_totals: dict[str, float] = {}
+    for txn in transactions:
+        if txn.transaction_type != TransactionType.DEBIT:
+            continue
+        category = (txn.category or "Uncategorized").strip() or "Uncategorized"
+        category_totals[category] = category_totals.get(category, 0.0) + float(txn.amount)
+
+    if not category_totals:
+        return []
+
+    total_spending = sum(category_totals.values())
+    top_categories = sorted(
+        category_totals.items(), key=lambda item: item[1], reverse=True
+    )[:CATEGORY_TREND_LIMIT]
+
+    return [
+        {
+            "category": category,
+            "amount": round(amount, 2),
+            "share_pct": round((amount / total_spending) * 100, 1) if total_spending > 0 else 0,
+        }
+        for category, amount in top_categories
+    ]
+
+
 def build_dashboard_summary(db: Session, user: User) -> dict:
     """Aggregate all user financial data into a single dashboard payload."""
     # Fetch all user data
@@ -96,6 +162,18 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
         .filter(
             Transaction.user_id == user.id,
             Transaction.date >= first_of_month,
+            Transaction.date <= today,
+        )
+        .all()
+    )
+
+    # Last N weeks of transactions for week-over-week trends.
+    trend_start = _week_start(today) - timedelta(days=7 * (DASHBOARD_TREND_WEEKS - 1))
+    trend_transactions = (
+        db.query(Transaction)
+        .filter(
+            Transaction.user_id == user.id,
+            Transaction.date >= trend_start,
             Transaction.date <= today,
         )
         .all()
@@ -190,6 +268,9 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
         for t in recent_txns
     ]
 
+    spending_trend = _build_spending_trend(trend_transactions, today)
+    category_spending = _build_category_spending(month_transactions)
+
     return {
         "net_worth": round(net_worth, 2),
         "total_assets": round(total_assets, 2),
@@ -201,4 +282,6 @@ def build_dashboard_summary(db: Session, user: User) -> dict:
         "upcoming_bills": upcoming_bills,
         "goals_summary": goals_summary,
         "recent_transactions": recent_transactions,
+        "spending_trend": spending_trend,
+        "category_spending": category_spending,
     }

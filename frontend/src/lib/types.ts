@@ -9,6 +9,22 @@ export interface DashboardSummary {
   upcoming_bills: UpcomingBill[];
   goals_summary: GoalSummary[];
   recent_transactions: RecentTransaction[];
+  spending_trend: SpendingTrendPoint[];
+  category_spending: CategorySpendingPoint[];
+}
+
+export interface SpendingTrendPoint {
+  week_start: string;
+  week_end: string;
+  label: string;
+  spending: number;
+  wow_change_pct: number | null;
+}
+
+export interface CategorySpendingPoint {
+  category: string;
+  amount: number;
+  share_pct: number;
 }
 
 export interface UpcomingBill {
@@ -40,6 +56,7 @@ export interface Account {
   user_id: string;
   name: string;
   account_type: string;
+  institution: string | null;
   balance: number;
   currency: string;
   created_at: string;
