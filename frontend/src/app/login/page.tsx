@@ -1,15 +1,23 @@
 "use client";
 
+import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { useTheme } from "@/components/layout/ThemeProvider";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 type AuthMode = "login" | "register" | "forgot" | "reset";
 
 interface MessageResponse {
   message: string;
 }
+
+const PASSWORD_PATTERN =
+  "(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{}|;:'\\\",.<>/?`~]).{8,}";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -22,6 +30,7 @@ export default function LoginPage() {
   const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { login, register } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
   const isRegister = mode === "register";
@@ -33,9 +42,7 @@ export default function LoginPage() {
     if (searchParams.get("mode") !== "reset") return;
     setMode("reset");
     const token = searchParams.get("token");
-    if (token) {
-      setResetToken(token);
-    }
+    if (token) setResetToken(token);
   }, [searchParams]);
 
   const switchMode = (nextMode: AuthMode) => {
@@ -78,233 +85,255 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-700 via-brand-800 to-brand-950 items-center justify-center p-12">
-        <div className="max-w-md text-white">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-              <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold tracking-tight">FinPulse</span>
-          </div>
-          <h1 className="text-4xl font-bold leading-tight mb-4">
-            Take control of your financial future
-          </h1>
-          <p className="text-lg text-brand-200 leading-relaxed">
-            Track expenses, manage credit cards, monitor investments, and achieve your financial
-            goals — all in one place.
-          </p>
-          <div className="mt-10 grid grid-cols-2 gap-6">
-            <div className="rounded-lg bg-white/10 p-4">
-              <div className="text-2xl font-bold">Smart</div>
-              <div className="text-sm text-brand-200 mt-1">AI-powered financial insights</div>
-            </div>
-            <div className="rounded-lg bg-white/10 p-4">
-              <div className="text-2xl font-bold">Secure</div>
-              <div className="text-sm text-brand-200 mt-1">Bank-level encryption</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div
+      className="relative min-h-screen overflow-hidden text-[var(--fp-text)]"
+      style={{ fontFamily: '"Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif' }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 10% 14%, rgba(255,255,255,0.1), transparent 28%), radial-gradient(circle at 82% 8%, rgba(255,255,255,0.06), transparent 26%), linear-gradient(156deg, var(--fp-bg) 0%, var(--fp-bg-soft) 100%)",
+        }}
+      />
 
-      {/* Right form panel */}
-      <div className="flex flex-1 items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="h-9 w-9 rounded-lg bg-brand-600 flex items-center justify-center">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-gray-900">FinPulse</span>
-          </div>
-
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isRegister && "Create your account"}
-            {isLogin && "Welcome back"}
-            {isForgot && "Reset your password"}
-            {isReset && "Set a new password"}
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {isRegister && "Start your journey to financial clarity"}
-            {isLogin && "Sign in to your FinPulse account"}
-            {isForgot && "We'll send you a secure reset link"}
-            {isReset && "Choose a strong password to finish reset"}
-          </p>
-
-          {error && (
-            <div className="mt-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          {info && (
-            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-              {info}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            {isRegister && (
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                  Full name
-                </label>
-                <input
-                  id="fullName"
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
-                  placeholder="John Doe"
-                />
+      <div className="relative z-10 flex min-h-screen">
+        <aside className="hidden w-[44%] border-r border-[var(--fp-border)] bg-[var(--fp-surface)]/65 px-10 py-10 backdrop-blur xl:flex xl:flex-col xl:justify-between">
+          <div>
+            <div className="mb-8 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--fp-border)] bg-[var(--fp-surface-solid)]">
+                <span className="text-sm font-semibold tracking-[0.15em]">FP</span>
               </div>
-            )}
-
-            {(isLogin || isRegister || isForgot) && (
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
-                  placeholder="you@example.com"
-                />
-              </div>
-            )}
-
-            {isReset && (
-              <div>
-                <label htmlFor="resetToken" className="block text-sm font-medium text-gray-700">
-                  Reset token
-                </label>
-                <input
-                  id="resetToken"
-                  type="text"
-                  required
-                  value={resetToken}
-                  onChange={(e) => setResetToken(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
-                  placeholder="Paste your reset token"
-                />
-              </div>
-            )}
-
-            {(isLogin || isRegister || isReset) && (
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  {isReset ? "New password" : "Password"}
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
-                  placeholder="••••••••"
-                  minLength={8}
-                  maxLength={72}
-                  pattern={
-                    isRegister || isReset
-                      ? "(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{}|;:'\\\",.<>/?`~]).{8,}"
-                      : undefined
-                  }
-                  title={
-                    isRegister || isReset
-                      ? "Use at least 8 characters with uppercase, lowercase, number, and special character."
-                      : undefined
-                  }
-                />
-                {(isRegister || isReset) && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    Must be 8-72 chars and include uppercase, lowercase, number, and special character.
-                  </p>
-                )}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  {isRegister && "Creating account..."}
-                  {isLogin && "Signing in..."}
-                  {isForgot && "Sending reset link..."}
-                  {isReset && "Updating password..."}
-                </span>
-              ) : (
-                <>
-                  {isRegister && "Create account"}
-                  {isLogin && "Sign in"}
-                  {isForgot && "Send reset link"}
-                  {isReset && "Update password"}
-                </>
-              )}
-            </button>
-          </form>
-
-          {isLogin && (
-            <div className="mt-6 space-y-2 text-center text-sm text-gray-600">
-              <button
-                type="button"
-                onClick={() => switchMode("forgot")}
-                className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
-              >
-                Forgot password?
-              </button>
-              <p>
-                Don&apos;t have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => switchMode("register")}
-                  className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
+                <p
+                  className="text-2xl leading-none tracking-tight"
+                  style={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif' }}
                 >
-                  Create one
-                </button>
+                  FinPulse
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[var(--fp-text-soft)]">
+                  Weekly Financial Command Center
+                </p>
+              </div>
+            </div>
+
+            <h1
+              className="max-w-md text-4xl leading-tight"
+              style={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif' }}
+            >
+              Keep your financial operating rhythm every week.
+            </h1>
+            <p className="mt-4 max-w-md text-base leading-relaxed text-[var(--fp-text-muted)]">
+              Track transactions, monitor utilization, and complete one high-impact weekly action.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface-solid)]/70 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--fp-text-soft)]">Weekly Promise</p>
+              <p className="mt-2 text-sm text-[var(--fp-text-muted)]">
+                Full financial picture, one prioritized action, measurable progress.
               </p>
             </div>
-          )}
+            <div className="rounded-2xl border border-[var(--fp-border)] bg-[var(--fp-surface-solid)]/70 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--fp-text-soft)]">Built for Clarity</p>
+              <p className="mt-2 text-sm text-[var(--fp-text-muted)]">
+                No noisy dashboards. Focus on what moves net worth and resilience.
+              </p>
+            </div>
+          </div>
+        </aside>
 
-          {isRegister && (
-            <p className="mt-6 text-center text-sm text-gray-600">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => switchMode("login")}
-                className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
+        <main className="relative flex flex-1 items-center justify-center p-5 sm:p-8 lg:p-10">
+          <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 rounded-full border border-[var(--fp-border)] bg-[var(--fp-surface)]/90 px-3 py-2 text-xs font-medium text-[var(--fp-text-muted)] transition-colors hover:bg-[var(--fp-surface-elev)] hover:text-[var(--fp-text)]"
+              title="Switch theme"
+              type="button"
+            >
+              <span>{theme === "dark" ? "Dark" : "Light"}</span>
+              <span
+                className={clsx(
+                  "relative h-4 w-8 rounded-full transition-colors",
+                  theme === "dark" ? "bg-white/30" : "bg-black/20"
+                )}
               >
-                Sign in
-              </button>
-            </p>
-          )}
+                <span
+                  className={clsx(
+                    "absolute top-0.5 h-3 w-3 rounded-full transition-all",
+                    theme === "dark" ? "left-4 bg-white" : "left-0.5 bg-black"
+                  )}
+                />
+              </span>
+            </button>
+          </div>
 
-          {(isForgot || isReset) && (
-            <p className="mt-6 text-center text-sm text-gray-600">
-              <button
-                type="button"
-                onClick={() => switchMode("login")}
-                className="font-semibold text-brand-600 hover:text-brand-500 transition-colors"
+          <div className="w-full max-w-lg">
+            <Card className="rounded-3xl p-7 sm:p-8">
+              <div className="xl:hidden">
+                <p
+                  className="text-2xl tracking-tight"
+                  style={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif' }}
+                >
+                  FinPulse
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--fp-text-soft)]">
+                  Weekly Financial Command Center
+                </p>
+              </div>
+
+              <h2
+                className="mt-6 text-3xl leading-tight"
+                style={{ fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif' }}
               >
-                Back to sign in
-              </button>
-            </p>
-          )}
-        </div>
+                {isRegister && "Create your account"}
+                {isLogin && "Welcome back"}
+                {isForgot && "Reset your password"}
+                {isReset && "Set a new password"}
+              </h2>
+              <p className="mt-2 text-sm text-[var(--fp-text-muted)]">
+                {isRegister && "Start your journey to financial clarity"}
+                {isLogin && "Sign in to continue your weekly review"}
+                {isForgot && "Enter your email to receive a secure reset link"}
+                {isReset && "Create a strong password to finish reset"}
+              </p>
+
+              {error && (
+                <div className="mt-5 rounded-xl border border-[var(--fp-negative)]/35 bg-[var(--fp-negative)]/10 p-3 text-sm text-[var(--fp-negative)]">
+                  {error}
+                </div>
+              )}
+              {info && (
+                <div className="mt-5 rounded-xl border border-[var(--fp-positive)]/35 bg-[var(--fp-positive)]/10 p-3 text-sm text-[var(--fp-positive)]">
+                  {info}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                {isRegister && (
+                  <Input
+                    label="Full name"
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="John Doe"
+                    autoComplete="name"
+                  />
+                )}
+
+                {(isLogin || isRegister || isForgot) && (
+                  <Input
+                    label="Email address"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                  />
+                )}
+
+                {isReset && (
+                  <Input
+                    label="Reset token"
+                    type="text"
+                    required
+                    value={resetToken}
+                    onChange={(e) => setResetToken(e.target.value)}
+                    placeholder="Paste your reset token"
+                    autoComplete="off"
+                  />
+                )}
+
+                {(isLogin || isRegister || isReset) && (
+                  <div>
+                    <Input
+                      label={isReset ? "New password" : "Password"}
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      minLength={8}
+                      maxLength={72}
+                      pattern={isRegister || isReset ? PASSWORD_PATTERN : undefined}
+                      title={
+                        isRegister || isReset
+                          ? "Use at least 8 characters with uppercase, lowercase, number, and special character."
+                          : undefined
+                      }
+                      autoComplete={isReset ? "new-password" : isRegister ? "new-password" : "current-password"}
+                    />
+                    {(isRegister || isReset) && (
+                      <p className="mt-1 text-xs text-[var(--fp-text-soft)]">
+                        Use 8-72 characters with uppercase, lowercase, number, and special character.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <Button type="submit" disabled={submitting} size="lg" className="mt-1 w-full justify-center rounded-xl">
+                  {submitting && (
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  )}
+                  {isRegister && (submitting ? "Creating account..." : "Create account")}
+                  {isLogin && (submitting ? "Signing in..." : "Sign in")}
+                  {isForgot && (submitting ? "Sending reset link..." : "Send reset link")}
+                  {isReset && (submitting ? "Updating password..." : "Update password")}
+                </Button>
+              </form>
+
+              {isLogin && (
+                <div className="mt-6 space-y-2 text-center text-sm text-[var(--fp-text-muted)]">
+                  <button
+                    type="button"
+                    onClick={() => switchMode("forgot")}
+                    className="font-medium text-[var(--fp-text)] underline underline-offset-4 transition-colors hover:text-[var(--fp-text-muted)]"
+                  >
+                    Forgot password?
+                  </button>
+                  <p>
+                    Don&apos;t have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => switchMode("register")}
+                      className="font-medium text-[var(--fp-text)] underline underline-offset-4 transition-colors hover:text-[var(--fp-text-muted)]"
+                    >
+                      Create one
+                    </button>
+                  </p>
+                </div>
+              )}
+
+              {isRegister && (
+                <p className="mt-6 text-center text-sm text-[var(--fp-text-muted)]">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => switchMode("login")}
+                    className="font-medium text-[var(--fp-text)] underline underline-offset-4 transition-colors hover:text-[var(--fp-text-muted)]"
+                  >
+                    Sign in
+                  </button>
+                </p>
+              )}
+
+              {(isForgot || isReset) && (
+                <p className="mt-6 text-center text-sm text-[var(--fp-text-muted)]">
+                  <button
+                    type="button"
+                    onClick={() => switchMode("login")}
+                    className="font-medium text-[var(--fp-text)] underline underline-offset-4 transition-colors hover:text-[var(--fp-text-muted)]"
+                  >
+                    Back to sign in
+                  </button>
+                </p>
+              )}
+            </Card>
+          </div>
+        </main>
       </div>
     </div>
   );
