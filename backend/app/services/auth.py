@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.account import Account
 from app.models.user import User
+from app.services.notifications import send_notification_email
 from app.services.supabase_auth import (
     SupabaseAuthError,
     send_recovery_email,
@@ -47,6 +48,22 @@ def _build_password_reset_redirect_url() -> str | None:
     if not base:
         return None
     return f"{base}/login?mode=reset"
+
+
+def _build_local_password_reset_url(token: str) -> str | None:
+    base = (settings.frontend_base_url or "").rstrip("/")
+    if not base:
+        return None
+    return f"{base}/login?mode=reset&token={token}"
+
+
+def _password_reset_email_body(full_name: str, reset_url: str) -> str:
+    return (
+        f"Hi {full_name},\n\n"
+        "We received a request to reset your FinPulse password.\n\n"
+        f"Reset link: {reset_url}\n\n"
+        "This link expires in 30 minutes. If you did not request this, you can ignore this email.\n"
+    )
 
 
 def _ensure_default_account(db: Session, user_id: UUID) -> None:
@@ -184,18 +201,40 @@ def request_password_reset(db: Session, email: str) -> None:
             send_recovery_email(email, _build_password_reset_redirect_url())
             logger.info("Supabase recovery email requested for %s", email)
             return
-        except SupabaseAuthError:
-            logger.exception("Failed to request Supabase recovery email for %s", email)
+        except SupabaseAuthError as exc:
+            logger.error(
+                "Supabase recovery email request failed for %s: %s",
+                email,
+                exc.detail,
+            )
+            # Do not fall back to local reset tokens in Supabase mode.
+            return
 
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return
 
     token = create_password_reset_token(user.email, user.hashed_password)
-    logger.warning(
-        "Falling back to local reset token for %s (Supabase not configured/reachable): %s",
+    reset_url = _build_local_password_reset_url(token)
+    if not reset_url:
+        logger.warning(
+            "Local password-reset flow unavailable for %s: FRONTEND_BASE_URL missing.",
+            user.email,
+        )
+        return
+
+    delivered = send_notification_email(
         user.email,
-        token,
+        "FinPulse password reset",
+        _password_reset_email_body(user.full_name, reset_url),
+    )
+    if delivered:
+        logger.info("Local password-reset email sent to %s", user.email)
+        return
+
+    logger.warning(
+        "Local password-reset email not delivered for %s (SMTP not configured).",
+        user.email,
     )
 
 
