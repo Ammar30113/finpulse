@@ -97,11 +97,6 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
             detail="Too many failed login attempts. Please try again in 15 minutes.",
         )
 
-    user = db.query(User).filter(User.email == email).first()
-    if user and verify_password(password, user.hashed_password):
-        _failed_attempts.pop(email, None)
-        return user
-
     if settings.supabase_enabled:
         try:
             supabase_sign_in = sign_in_with_password(email, password)
@@ -111,6 +106,7 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
                 raise SupabaseAuthError("Supabase login returned no user id", status_code=502)
             supabase_uuid = UUID(str(supabase_user_id))
 
+            user = db.query(User).filter(User.email == email).first()
             if not user:
                 full_name = (supabase_user.get("user_metadata") or {}).get("full_name") or email.split("@")[0]
                 user = User(
@@ -131,8 +127,33 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
 
             _failed_attempts.pop(email, None)
             return user
-        except SupabaseAuthError:
-            logger.info("Supabase login failed for %s", email)
+        except SupabaseAuthError as exc:
+            detail_lower = exc.detail.lower()
+            if exc.status_code in (400, 401):
+                _failed_attempts[email].append(time.monotonic())
+                logger.info("Failed Supabase login attempt for %s: %s", email, exc.detail)
+                if "confirm" in detail_lower or "not confirmed" in detail_lower:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Please confirm your email before signing in.",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            logger.error("Supabase login unavailable for %s: %s", email, exc.detail)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Authentication service unavailable. Please try again shortly.",
+            ) from exc
+
+    user = db.query(User).filter(User.email == email).first()
+    if user and verify_password(password, user.hashed_password):
+        _failed_attempts.pop(email, None)
+        return user
 
     if not user or not verify_password(password, user.hashed_password):
         _failed_attempts[email].append(time.monotonic())
@@ -145,7 +166,7 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
     return user
 
 
-def register_user(db: Session, email: str, password: str, full_name: str) -> User:
+def register_user(db: Session, email: str, password: str, full_name: str) -> tuple[User, bool]:
     """Create a new user account with a default chequing account. Raises 409 if email exists."""
     existing = db.query(User).filter(User.email == email).first()
     if existing:
@@ -155,6 +176,7 @@ def register_user(db: Session, email: str, password: str, full_name: str) -> Use
         )
 
     supabase_user_id = None
+    requires_email_confirmation = False
     if settings.supabase_enabled:
         try:
             supabase_signup = sign_up_user(email, password, full_name)
@@ -163,6 +185,7 @@ def register_user(db: Session, email: str, password: str, full_name: str) -> Use
             if not supabase_user_id:
                 raise SupabaseAuthError("Supabase signup returned no user id", status_code=502)
             supabase_user_id = UUID(str(supabase_user_id))
+            requires_email_confirmation = supabase_signup.get("session") is None
         except SupabaseAuthError as exc:
             if exc.status_code in (400, 409):
                 raise HTTPException(
@@ -191,7 +214,7 @@ def register_user(db: Session, email: str, password: str, full_name: str) -> Use
     db.refresh(user)
 
     logger.info("New user registered: %s", user.id)
-    return user
+    return user, requires_email_confirmation
 
 
 def request_password_reset(db: Session, email: str) -> None:
@@ -255,8 +278,16 @@ def reset_password(db: Session, token: str, new_password: str) -> None:
 
             logger.info("Supabase password updated; local user not found for sync")
             return
-        except SupabaseAuthError:
-            logger.info("Supabase access-token password update failed; attempting local token flow")
+        except SupabaseAuthError as exc:
+            if exc.status_code in (400, 401):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired password reset token",
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Password reset service unavailable. Please try again shortly.",
+            ) from exc
 
     try:
         email, token_fingerprint = decode_password_reset_token(token)

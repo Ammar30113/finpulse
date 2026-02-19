@@ -11,6 +11,7 @@ from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     RegisterRequest,
+    RegisterResponse,
     ResetPasswordRequest,
     ResetPasswordResponse,
 )
@@ -32,12 +33,20 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     )
 
 
-@router.post("/register", response_model=LoginResponse)
+@router.post("/register", response_model=RegisterResponse)
 @limiter.limit("3/minute")
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
-    user = register_user(db, payload.email, payload.password, payload.full_name)
+    user, requires_email_confirmation = register_user(
+        db, payload.email, payload.password, payload.full_name
+    )
+    if requires_email_confirmation:
+        return RegisterResponse(
+            requires_email_confirmation=True,
+            message="Check your email to confirm your account before signing in.",
+        )
+
     token = create_access_token(data={"sub": str(user.id)})
-    return LoginResponse(
+    return RegisterResponse(
         access_token=token,
         user=UserResponse.model_validate(user),
     )
@@ -53,10 +62,7 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     request_password_reset(db, payload.email)
     return ForgotPasswordResponse(
-        message=(
-            "If an account with that email exists and email delivery is configured, "
-            "password reset instructions have been sent."
-        )
+        message="If an account with that email exists, password reset instructions have been sent."
     )
 
 

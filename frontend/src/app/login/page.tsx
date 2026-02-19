@@ -74,7 +74,13 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
-        await register(email, password, fullName);
+        const result = await register(email, password, fullName);
+        if (result.requires_email_confirmation) {
+          setInfo(result.message || "Check your email to confirm your account before signing in.");
+          setMode("login");
+          setPassword("");
+          return;
+        }
         router.replace("/dashboard");
       } else if (isLogin) {
         await login(email, password);

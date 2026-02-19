@@ -1,12 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AuthContext, type AuthUser } from "@/lib/auth";
+import { AuthContext, type AuthUser, type RegisterResult } from "@/lib/auth";
 import { api } from "@/lib/api";
 
 interface LoginResponse {
   access_token: string;
   user: AuthUser;
+}
+
+interface RegisterResponse {
+  access_token: string | null;
+  user: AuthUser | null;
+  requires_email_confirmation: boolean;
+  message?: string;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -52,15 +59,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   }, []);
 
-  const register = useCallback(async (email: string, password: string, fullName: string) => {
-    const res = await api.post<LoginResponse>("/auth/register", {
+  const register = useCallback(async (email: string, password: string, fullName: string): Promise<RegisterResult> => {
+    const res = await api.post<RegisterResponse>("/auth/register", {
       email,
       password,
       full_name: fullName,
     });
-    api.setToken(res.access_token);
-    localStorage.setItem("user", JSON.stringify(res.user));
-    setUser(res.user);
+
+    if (res.access_token && res.user) {
+      api.setToken(res.access_token);
+      localStorage.setItem("user", JSON.stringify(res.user));
+      setUser(res.user);
+      return { requires_email_confirmation: false };
+    }
+
+    return {
+      requires_email_confirmation: !!res.requires_email_confirmation,
+      message: res.message,
+    };
   }, []);
 
   const logout = useCallback(() => {

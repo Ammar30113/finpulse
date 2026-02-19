@@ -46,6 +46,14 @@ class LoginResponse(BaseModel):
     user: UserResponse
 
 
+class RegisterResponse(BaseModel):
+    access_token: str | None = None
+    token_type: str = "bearer"
+    user: UserResponse | None = None
+    requires_email_confirmation: bool = False
+    message: str | None = None
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
